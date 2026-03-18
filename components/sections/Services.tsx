@@ -71,7 +71,7 @@ export default function Services() {
                 alt={service.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
-              <div className="absolute inset-0 bg-[#3D4F5C]/70 group-hover:bg-[#3D4F5C]/50 transition-colors duration-300"></div>
+              <div className="absolute inset-0 bg-[#3D4F5C]/40 group-hover:bg-[#3D4F5C]/20 transition-colors duration-300"></div>
 
               {/* Icon */}
               <div className="absolute top-4 left-4 w-10 h-10 rounded-sm bg-[#E8951A] flex items-center justify-center">
