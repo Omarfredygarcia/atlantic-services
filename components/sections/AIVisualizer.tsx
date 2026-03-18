@@ -125,7 +125,7 @@ export default function AIVisualizer() {
                 rel="noopener noreferrer"
                 className="block w-full py-3 bg-[#E8951A] text-white text-sm font-bold uppercase tracking-widest text-center rounded-sm hover:bg-[#d4841a] transition-colors"
               >
-                Try it yourself →
+                Try it yourself &#8594;
               </a>
             </div>
 
