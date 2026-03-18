@@ -29,7 +29,7 @@ export default function AIVisualizer() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-3 bg-[#E8951A] text-white px-5 py-3 rounded-full shadow-2xl hover:bg-[#d4841a] transition-all duration-300 hover:scale-105 group"
+        className="fixed bottom-8 right-6 z-40 flex items-center gap-2 bg-[#1a1a1a] border-2 border-[#E8951A] text-white px-4 py-3 rounded-full shadow-2xl hover:bg-[#E8951A] transition-all duration-300 hover:scale-105 mb-16 md:mb-0"
       >
         <div className="relative">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-6 h-6">
