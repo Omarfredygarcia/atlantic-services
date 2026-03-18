@@ -29,9 +29,9 @@ export default function Hero() {
           <button className="px-10 py-4 bg-[#E8951A] text-white text-sm font-bold uppercase tracking-widest rounded-sm hover:bg-[#d4841a] transition-colors">
             Get a Free Estimate
           </button>
-          <button className="px-10 py-4 border-2 border-white/40 text-white text-sm font-medium uppercase tracking-wider rounded-sm hover:border-[#E8951A] hover:text-[#E8951A] transition-colors">
+          <a href="/gallery" className="px-10 py-4 border-2 border-white/40 text-white text-sm font-medium uppercase tracking-wider rounded-sm hover:border-[#E8951A] hover:text-[#E8951A] transition-colors">
             View Our Work →
-          </button>
+          </a>
         </div>
       </div>
 
