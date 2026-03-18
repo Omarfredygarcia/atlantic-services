@@ -122,11 +122,10 @@ export default function AIVisualizer() {
               
                 href="https://floori.io"
                 target="_blank"
-                rel="noopener noreferrer"
                 className="block w-full py-3 bg-[#E8951A] text-white text-sm font-bold uppercase tracking-widest text-center rounded-sm hover:bg-[#d4841a] transition-colors"
-              >
-                Try it yourself &#8594;
-              </a>
+                >
+                {'Try it yourself →'}
+                </a>
             </div>
 
           </div>
