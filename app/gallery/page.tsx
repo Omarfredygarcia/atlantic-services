@@ -1,4 +1,5 @@
-'use client'
+Perfecto. Abre app/gallery/page.tsx, borra todo y pega:
+tsx'use client'
 
 import { useState, useRef } from 'react'
 import Navbar from '@/components/sections/Navbar'
@@ -25,7 +26,35 @@ const projects = [
   },
 ]
 
-function BeforeAfterSlider({ before, after, title }: { before: string; after: string; title: string }) {
+const galleryImages = [
+  { src: '/images/COMMERCIAL/0ee6bdc6-7987-4af3-b6cc-611df374452f.webp', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImage1dHQVG.webp', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImage25xhxO.webp', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImageJ46ZJ1.webp', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImageLaWE9B.webp', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImageSrA35c.webp', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImageqoAuKg.webp', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImagevvASAe.webp', category: 'Commercial' },
+  { src: '/images/INTERIOR/IMG_4735.webp', category: 'Interior' },
+  { src: '/images/INTERIOR/PHOTO-2023-05-02-17-56-49+29.webp', category: 'Interior' },
+  { src: '/images/INTERIOR/PHOTO-2023-05-02-17-56-54.webp', category: 'Interior' },
+  { src: '/images/INTERIOR/fe8b726d-e64c-410f-9678-6b5b553d282b.webp', category: 'Interior' },
+  { src: '/images/INTERIOR/tempImageg5ncA9.webp', category: 'Interior' },
+  { src: '/images/EXTERIOR/d7fbda8b-3fee-401f-949b-94bc17143fc9.webp', category: 'Exterior' },
+  { src: '/images/REMODELING/tempImageMtSaY6.webp', category: 'Remodeling' },
+  { src: '/images/REMODELING/tempImagesDXud9.webp', category: 'Remodeling' },
+  { src: '/images/REMODELING/tempImagezZmvwQ.webp', category: 'Remodeling' },
+  { src: '/images/WATERPROOFING/IMG_3976.webp', category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3977.webp', category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3979.webp', category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3980.webp', category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3981.webp', category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3982.webp', category: 'Waterproofing' },
+]
+
+const categories = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
+
+function BeforeAfterSlider({ before, after, title, category }: { before: string; after: string; title: string; category: string }) {
   const [sliderPos, setSliderPos] = useState(50)
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -48,15 +77,10 @@ function BeforeAfterSlider({ before, after, title }: { before: string; after: st
         onMouseMove={(e) => { if (isDragging.current) handleMove(e.clientX) }}
         onTouchMove={(e) => handleMove(e.touches[0].clientX)}
       >
-        {/* AFTER image — full width */}
         <img src={after} alt="After" className="absolute inset-0 w-full h-full object-cover" />
-
-        {/* BEFORE image — clipped */}
         <div className="absolute inset-0 overflow-hidden" style={{ width: `${sliderPos}%` }}>
           <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover" style={{ width: `${10000 / sliderPos}%` }} />
         </div>
-
-        {/* Divider line */}
         <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10" style={{ left: `${sliderPos}%` }}>
           <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-[#E8951A] border-2 border-white flex items-center justify-center shadow-lg">
             <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-5 h-5">
@@ -64,19 +88,11 @@ function BeforeAfterSlider({ before, after, title }: { before: string; after: st
             </svg>
           </div>
         </div>
-
-        {/* Labels */}
-        <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">
-          Before
-        </div>
-        <div className="absolute top-3 right-3 bg-[#E8951A] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">
-          After
-        </div>
+        <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">Before</div>
+        <div className="absolute top-3 right-3 bg-[#E8951A] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">After</div>
       </div>
-
-      {/* Project info */}
       <div className="p-5 bg-[#3D4F5C]">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#E8951A] mb-1">{projects.find(p => p.before === before)?.category}</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#E8951A] mb-1">{category}</p>
         <h3 className="font-serif text-lg font-semibold text-white">{title}</h3>
         <p className="text-xs text-white/50 mt-1">Drag the slider to see the transformation</p>
       </div>
@@ -85,16 +101,31 @@ function BeforeAfterSlider({ before, after, title }: { before: string; after: st
 }
 
 export default function Gallery() {
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [lightbox, setLightbox] = useState<string | null>(null)
+
+  const filtered = activeCategory === 'All'
+    ? galleryImages
+    : galleryImages.filter(img => img.category === activeCategory)
+
   return (
     <main>
       <Navbar />
-      <section className="bg-black py-20 px-10">
-        <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-3">Our work</p>
-          <h1 className="font-serif text-5xl font-semibold text-white mb-5">Before & After</h1>
-          <p className="text-lg text-white/60 font-light max-w-xl mx-auto">
-            Drag the slider on each project to see the full transformation — from start to finish.
-          </p>
+
+      {/* Hero */}
+      <section className="bg-black py-16 px-6 md:px-10 text-center">
+        <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-3">Our work</p>
+        <h1 className="font-serif text-5xl font-semibold text-white mb-5">Project Gallery</h1>
+        <p className="text-lg text-white/60 font-light max-w-xl mx-auto">
+          Real projects, real transformations. Drag the sliders to see before & after, or browse our full portfolio below.
+        </p>
+      </section>
+
+      {/* Before & After */}
+      <section className="bg-[#3D4F5C] py-16 px-6 md:px-10">
+        <div className="text-center mb-10">
+          <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-2">Transformations</p>
+          <h2 className="font-serif text-4xl font-semibold text-white">Before & After</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {projects.map((project, index) => (
@@ -103,10 +134,79 @@ export default function Gallery() {
               before={project.before}
               after={project.after}
               title={project.title}
+              category={project.category}
             />
           ))}
         </div>
       </section>
+
+      {/* Photo Grid */}
+      <section className="bg-gray-50 py-16 px-6 md:px-10">
+        <div className="text-center mb-10">
+          <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-2">Portfolio</p>
+          <h2 className="font-serif text-4xl font-semibold text-gray-900 mb-8">All Projects</h2>
+
+          {/* Category filters */}
+          <div className="flex flex-wrap justify-center gap-3 mb-10">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-5 py-2 text-sm font-semibold uppercase tracking-wider rounded-sm transition-colors ${
+                  activeCategory === cat
+                    ? 'bg-[#E8951A] text-white'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-[#E8951A] hover:text-[#E8951A]'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-7xl mx-auto">
+          {filtered.map((img, index) => (
+            <div
+              key={index}
+              className="relative aspect-square overflow-hidden rounded-sm cursor-pointer group"
+              onClick={() => setLightbox(img.src)}
+            >
+              <img
+                src={img.src}
+                alt={img.category}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[#E8951A] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm">
+                  {img.category}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-6 right-6 text-white text-4xl font-light hover:text-[#E8951A] transition-colors"
+            onClick={() => setLightbox(null)}
+          >
+            ×
+          </button>
+          <img
+            src={lightbox}
+            alt="Project"
+            className="max-w-full max-h-full object-contain rounded-sm"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       <Footer />
     </main>
   )
