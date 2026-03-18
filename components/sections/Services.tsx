@@ -59,7 +59,7 @@ export default function Services() {
           From small repairs to full-scale construction — we handle every project with the same level of precision and care.
         </p>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 px-6 md:px-10">
         {services.map((service, index) => (
           <div key={index}
             className="group relative overflow-hidden rounded-sm cursor-pointer border-2 border-transparent hover:border-[#E8951A] hover:shadow-xl transition-all duration-300">
