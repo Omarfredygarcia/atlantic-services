@@ -6,6 +6,7 @@ import ContactForm from '@/components/sections/ContactForm'
 import CtaBar from '@/components/sections/CtaBar'
 import Footer from '@/components/sections/Footer'
 import Navbar from '@/components/sections/Navbar'
+import AIVisualizer from '@/components/sections/AIVisualizer'
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
       <ContactForm />
       <CtaBar />
       <Footer />
+      <AIVisualizer />
     </main>
   )
 }
