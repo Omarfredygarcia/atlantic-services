@@ -26,9 +26,9 @@ export default function Hero() {
           From flooring and painting to full-scale restoration and commercial construction — precision craftsmanship, delivered on time and on budget.
         </p>
         <div className="flex gap-4 flex-wrap">
-          <button className="px-10 py-4 bg-[#E8951A] text-white text-sm font-bold uppercase tracking-widest rounded-sm hover:bg-[#d4841a] transition-colors">
-            Get a Free Estimate
-          </button>
+          <a href="/#contact" className="text-sm font-bold uppercase tracking-wider px-6 py-3 bg-[#E8951A] text-white rounded-sm hover:bg-[#d4841a] transition-colors">
+            Free Estimate
+          </a>
           <a href="/gallery" className="px-10 py-4 border-2 border-white/40 text-white text-sm font-medium uppercase tracking-wider rounded-sm hover:border-[#E8951A] hover:text-[#E8951A] transition-colors">
             View Our Work →
           </a>
