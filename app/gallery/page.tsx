@@ -1,5 +1,4 @@
-Perfecto. Abre app/gallery/page.tsx, borra todo y pega:
-tsx'use client'
+'use client'
 
 import { useState, useRef } from 'react'
 import Navbar from '@/components/sections/Navbar'
