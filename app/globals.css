@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root {
+  --font-barlow: 'Barlow', sans-serif;
+  --font-playfair: 'Playfair Display', serif;
+}
+
+body {
+  font-family: var(--font-barlow);
+}
+
+.font-serif {
+  font-family: var(--font-playfair);
+}
