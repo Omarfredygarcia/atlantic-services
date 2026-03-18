@@ -78,7 +78,7 @@ export default function AIVisualizer() {
             </div>
 
             {/* Video */}
-            <div className="relative flex-1 bg-black">
+           <div className="relative bg-black overflow-hidden" style={{height: '420px'}}>
               <video
                 key={activeVideo}
                 src={videos[activeVideo].src}
