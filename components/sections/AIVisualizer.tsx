@@ -120,12 +120,7 @@ export default function AIVisualizer() {
                 Want to visualize your own space? Try our AI tool — it's free!
               </p>
               
-                href="https://floori.io"
-                target="_blank"
-                className="block w-full py-3 bg-[#E8951A] text-white text-sm font-bold uppercase tracking-widest text-center rounded-sm hover:bg-[#d4841a] transition-colors"
-                >
-                {'Try it yourself →'}
-                </a>
+<a href="https://floori.io" target="_blank" className="block w-full py-3 bg-[#E8951A] text-white text-sm font-bold uppercase tracking-widest text-center rounded-sm hover:bg-[#d4841a] transition-colors">Try it yourself</a>
             </div>
 
           </div>
