@@ -15,7 +15,9 @@ export default function Navbar() {
       </div>
       <ul className="hidden md:flex gap-8 list-none">
         <li className="text-sm font-semibold text-white/80 uppercase tracking-wider cursor-pointer hover:text-[#E8951A] transition-colors">Services</li>
-        <li className="text-sm font-semibold text-white/80 uppercase tracking-wider cursor-pointer hover:text-[#E8951A] transition-colors">Projects</li>
+        <li className="text-sm font-semibold text-white/80 uppercase tracking-wider cursor-pointer hover:text-[#E8951A] transition-colors">
+          <a href="/gallery" className="hover:text-[#E8951A]">Projects</a>
+        </li>
         <li className="text-sm font-semibold text-white/80 uppercase tracking-wider cursor-pointer hover:text-[#E8951A] transition-colors">About</li>
         <li className="text-sm font-semibold text-white/80 uppercase tracking-wider cursor-pointer hover:text-[#E8951A] transition-colors">Contact</li>
       </ul>
