@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(`${RPA_URL}/procesar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proyectos_ids: proyectos.map((p: { id: string }) => p.id) }),
+      git add .body: JSON.stringify({ proyectos_ids: proyectos.map((p: { id: string }) => p.id) }),
     })
 
     if (!res.ok) throw new Error(`RPA service error: ${res.status}`)
