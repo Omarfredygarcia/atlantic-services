@@ -19,31 +19,22 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // Llamar al servicio RPA en Render
+  // Llamar al servicio RPA en Render — fire and forget
   const RPA_URL = process.env.RPA_SERVICE_URL || 'http://localhost:8000'
 
   try {
-    const res = await fetch(`${RPA_URL}/procesar`, {
+    // No await — lanzar sin esperar respuesta
+    fetch(`${RPA_URL}/procesar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ proyectos_ids: proyectos.map((p: { id: string }) => p.id) }),
-      signal: AbortSignal.timeout(150000), // 2.5 minutos
-    })
-
-    if (!res.ok) throw new Error(`RPA service error: ${res.status}`)
-    const result = await res.json()
+    }).catch(() => {}) // ignorar errores de conexión
 
     return NextResponse.json({
       ok: true,
-      mensaje: `${result.completados || 0} proyectos procesados`,
-      detalle: result
+      mensaje: `${proyectos.length} proyecto(s) enviados a procesar. Actualiza en 1-2 minutos.`,
     })
   } catch (e: any) {
-    // Si el servicio RPA no está disponible, retornar instrucción manual
-    return NextResponse.json({
-      ok: false,
-      error: 'Servicio RPA no disponible. Ejecuta python main.py en el PC de oficina.',
-      detalle: e.message
-    }, { status: 503 })
+    return NextResponse.json({ ok: false, error: e.message }, { status: 500 })
   }
 }
