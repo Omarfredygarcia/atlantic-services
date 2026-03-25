@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ proyectos_ids: proyectos.map((p: { id: string }) => p.id) }),
-      signal: AbortSignal.timeout(60000), // 60 segundos
+      signal: AbortSignal.timeout(150000), // 2.5 minutos
     })
 
     if (!res.ok) throw new Error(`RPA service error: ${res.status}`)
