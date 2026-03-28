@@ -3,15 +3,15 @@ import { createServiceClient } from '@/lib/supabase-server'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = createServiceClient()
 
-  // Obtener proyecto
   const { data: proyecto, error } = await supabase
     .from('proyectos')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error || !proyecto) {
@@ -22,15 +22,11 @@ export async function GET(
     return NextResponse.json({ error: 'Este proyecto no tiene Excel generado' }, { status: 404 })
   }
 
-  // El Excel está en Railway (/tmp/cotizaciones/) — lo pedimos al RPA service
   const RPA_URL = process.env.RPA_SERVICE_URL ||
     'https://atlantic-rpa-service-production.up.railway.app'
 
   try {
-    const res = await fetch(
-      `${RPA_URL}/excel/${params.id}`,
-      { headers: { 'Content-Type': 'application/json' } }
-    )
+    const res = await fetch(`${RPA_URL}/excel/${id}`)
 
     if (!res.ok) {
       return NextResponse.json(
