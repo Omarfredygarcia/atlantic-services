@@ -1,4 +1,4 @@
-export type EstadoProyecto = 'PENDIENTE' | 'EN_PROCESO' | 'COMPLETADO' | 'ERROR'
+export type EstadoProyecto = 'PENDIENTE' | 'EN_PROCESO' | 'COTIZADO' | 'ENVIADO' | 'COMPLETADO' | 'ERROR'
 export type RolUsuario = 'admin' | 'operador'
 
 export interface Proyecto {
@@ -17,6 +17,8 @@ export interface Proyecto {
   fecha_hora_proceso?: string
   pdf_path?: string
   pdf_url?: string
+  excel_path?: string
+  fecha_envio_email?: string
   error_detalle?: string
   created_at: string
   updated_at: string
@@ -75,6 +77,8 @@ export const TIPOS_PROYECTO = [
 export const ESTADO_COLORS: Record<EstadoProyecto, string> = {
   PENDIENTE:   'bg-yellow-100 text-yellow-800',
   EN_PROCESO:  'bg-blue-100 text-blue-800',
+  COTIZADO:    'bg-purple-100 text-purple-800',
+  ENVIADO:     'bg-teal-100 text-teal-800',
   COMPLETADO:  'bg-green-100 text-green-800',
   ERROR:       'bg-red-100 text-red-800',
 }

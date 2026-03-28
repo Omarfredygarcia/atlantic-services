@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [runningRPA, setRunningRPA] = useState(false)
   const [rpaMsg, setRpaMsg] = useState('')
+  const [enviandoId, setEnviandoId] = useState<string | null>(null)
   const [filtroEstado, setFiltroEstado] = useState<string>('TODOS')
   const [usuario, setUsuario] = useState<string>('')
 
@@ -36,7 +37,6 @@ export default function DashboardPage() {
       .from('proyectos')
       .select('*')
       .order('created_at', { ascending: false })
-
     if (!error && data) setProyectos(data)
     setLoading(false)
   }
@@ -54,15 +54,51 @@ export default function DashboardPage() {
       const res = await fetch('/api/cotizacion', { method: 'POST' })
       const data = await res.json()
       if (data.ok) {
-        setRpaMsg(`✅ ${data.mensaje}`)
+        setRpaMsg(`✅ ${data.mensaje || 'RPA completado'}`)
         cargarProyectos()
       } else {
         setRpaMsg(`❌ Error: ${data.error}`)
       }
-    } catch (e) {
+    } catch {
       setRpaMsg('❌ Error al conectar con el servidor RPA')
     }
     setRunningRPA(false)
+  }
+
+  async function enviarAlCliente(proyectoId: string, clienteEmail: string) {
+    if (!confirm(`¿Enviar cotización al cliente ${clienteEmail}?`)) return
+    setEnviandoId(proyectoId)
+    setRpaMsg(`Enviando email a ${clienteEmail}...`)
+    try {
+      const RPA_URL = process.env.NEXT_PUBLIC_RPA_SERVICE_URL ||
+        'https://atlantic-rpa-service-production.up.railway.app'
+      const res = await fetch(`${RPA_URL}/enviar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proyecto_id: proyectoId }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setRpaMsg(`✅ Email enviado a ${clienteEmail}`)
+        cargarProyectos()
+      } else {
+        setRpaMsg(`❌ Error: ${data.detail || data.error}`)
+      }
+    } catch {
+      setRpaMsg('❌ Error al conectar con el servidor')
+    }
+    setEnviandoId(null)
+  }
+
+  async function resetearProyecto(id: string) {
+    const supabase = createClient()
+    await supabase.from('proyectos').update({
+      estado: 'PENDIENTE',
+      ultimo_paso: null,
+      error_detalle: null,
+      fecha_hora_proceso: null,
+    }).eq('id', id)
+    cargarProyectos()
   }
 
   const proyectosFiltrados = filtroEstado === 'TODOS'
@@ -72,7 +108,8 @@ export default function DashboardPage() {
   const stats = {
     total:      proyectos.length,
     pendientes: proyectos.filter(p => p.estado === 'PENDIENTE').length,
-    completados:proyectos.filter(p => p.estado === 'COMPLETADO').length,
+    cotizados:  proyectos.filter(p => p.estado === 'COTIZADO').length,
+    enviados:   proyectos.filter(p => p.estado === 'ENVIADO').length,
     errores:    proyectos.filter(p => p.estado === 'ERROR').length,
   }
 
@@ -97,12 +134,13 @@ export default function DashboardPage() {
 
       <div className="p-6">
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-5 gap-4 mb-6">
           {[
-            { label: 'Total', value: stats.total, color: 'text-white' },
+            { label: 'Total',      value: stats.total,      color: 'text-white' },
             { label: 'Pendientes', value: stats.pendientes, color: 'text-yellow-400' },
-            { label: 'Completados', value: stats.completados, color: 'text-green-400' },
-            { label: 'Errores', value: stats.errores, color: 'text-red-400' },
+            { label: 'Cotizados',  value: stats.cotizados,  color: 'text-purple-400' },
+            { label: 'Enviados',   value: stats.enviados,   color: 'text-teal-400' },
+            { label: 'Errores',    value: stats.errores,    color: 'text-red-400' },
           ].map(s => (
             <div key={s.label} className="bg-[#1C1C1C] rounded-xl p-4 border border-[#333]">
               <p className="text-gray-400 text-sm">{s.label}</p>
@@ -142,12 +180,14 @@ export default function DashboardPage() {
             <option value="TODOS">Todos los estados</option>
             <option value="PENDIENTE">Pendiente</option>
             <option value="EN_PROCESO">En proceso</option>
+            <option value="COTIZADO">Cotizado</option>
+            <option value="ENVIADO">Enviado</option>
             <option value="COMPLETADO">Completado</option>
             <option value="ERROR">Error</option>
           </select>
         </div>
 
-        {/* Mensaje RPA */}
+        {/* Mensaje RPA / Email */}
         {rpaMsg && (
           <div className={`mb-4 px-4 py-2 rounded-lg text-sm font-medium ${
             rpaMsg.startsWith('✅') ? 'bg-green-900/30 text-green-400 border border-green-700' :
@@ -180,7 +220,10 @@ export default function DashboardPage() {
                   onClick={() => router.push(`/admin/proyectos/${p.id}`)}
                 >
                   <td className="px-4 py-3 text-[#E8951A] font-mono text-sm font-bold">{p.project_code}</td>
-                  <td className="px-4 py-3 text-white text-sm">{p.cliente_nombre}</td>
+                  <td className="px-4 py-3">
+                    <p className="text-white text-sm">{p.cliente_nombre}</p>
+                    <p className="text-gray-500 text-xs">{p.cliente_email}</p>
+                  </td>
                   <td className="px-4 py-3 text-gray-300 text-sm">{p.tipo_proyecto || '—'}</td>
                   <td className="px-4 py-3 text-gray-300 text-sm text-center">{p.area_total_ft2 || '—'}</td>
                   <td className="px-4 py-3">
@@ -193,23 +236,39 @@ export default function DashboardPage() {
                     {p.fecha_hora_proceso ? new Date(p.fecha_hora_proceso).toLocaleString() : '—'}
                   </td>
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       <button
                         onClick={() => router.push(`/admin/proyectos/${p.id}`)}
                         className="bg-[#333] hover:bg-[#E8951A] hover:text-black text-white text-xs px-3 py-1 rounded transition-colors"
                       >
                         Editar
                       </button>
-                      {(p.estado === 'COMPLETADO' || p.estado === 'ERROR') && (
+
+                      {/* Botón Enviar al Cliente — solo si COTIZADO */}
+                      {p.estado === 'COTIZADO' && (
                         <button
-                          onClick={async () => {
-                            const supabase = createClient()
-                            await supabase.from('proyectos').update({
-                              estado: 'PENDIENTE', ultimo_paso: null,
-                              error_detalle: null, fecha_hora_proceso: null
-                            }).eq('id', p.id)
-                            cargarProyectos()
-                          }}
+                          onClick={() => enviarAlCliente(p.id, p.cliente_email)}
+                          disabled={enviandoId === p.id}
+                          className="bg-teal-600 hover:bg-teal-500 disabled:bg-gray-600 text-white text-xs px-3 py-1 rounded transition-colors"
+                        >
+                          {enviandoId === p.id ? '⏳' : '📧 Enviar'}
+                        </button>
+                      )}
+
+                      {/* Botón descargar Excel */}
+                      {p.excel_path && (
+                        <button
+                          onClick={() => window.open(`/api/proyectos/${p.id}/excel`, '_blank')}
+                          className="bg-green-700 hover:bg-green-600 text-white text-xs px-3 py-1 rounded transition-colors"
+                        >
+                          ↓ Excel
+                        </button>
+                      )}
+
+                      {/* Reset */}
+                      {(['COTIZADO', 'ENVIADO', 'COMPLETADO', 'ERROR'] as EstadoProyecto[]).includes(p.estado) && (
+                        <button
+                          onClick={() => resetearProyecto(p.id)}
                           className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1 rounded transition-colors"
                         >
                           ↺ Reset
