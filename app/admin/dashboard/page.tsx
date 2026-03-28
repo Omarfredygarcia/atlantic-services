@@ -70,9 +70,10 @@ export default function DashboardPage() {
     setEnviandoId(proyectoId)
     setRpaMsg(`Enviando email a ${clienteEmail}...`)
     try {
-      const RPA_URL = process.env.NEXT_PUBLIC_RPA_SERVICE_URL ||
+      /*const RPA_URL = process.env.NEXT_PUBLIC_RPA_SERVICE_URL ||
         'https://atlantic-rpa-service-production.up.railway.app'
-      const res = await fetch(`${RPA_URL}/enviar`, {
+       */ 
+      const res = await fetch('/api/enviar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ proyecto_id: proyectoId }),
