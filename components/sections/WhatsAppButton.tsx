@@ -12,7 +12,7 @@ export default function WhatsAppButton() {
     return () => clearInterval(interval)
   }, [])
 
-  const url = 'https://wa.me/13179915878?text=Hello%20I%20would%20like%20a%20free%20estimate'
+  const url = 'https://wa.me/573184762753?text=Hello%20I%20would%20like%20a%20free%20estimate'
   const box1 = pulse ? 'relative bg-[#25D366] rounded-full p-3 shadow-lg scale-110' : 'relative bg-[#25D366] rounded-full p-3 shadow-lg scale-100'
   const box2 = pulse ? 'absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-50' : 'absolute inset-0 rounded-full bg-[#25D366] opacity-0'
 
