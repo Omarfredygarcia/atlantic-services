@@ -7,7 +7,7 @@ const stats = [
 
 export default function Stats() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 bg-[#E8951A]">
+    <div className="grid grid-cols-2 md:grid-cols-4 bg-[#C9A84C]">
       {stats.map((stat, index) => (
         <div key={index} className="py-8 px-8 text-center border-r border-white/20 last:border-r-0">
           <p className="font-serif text-4xl font-semibold text-white">{stat.number}</p>

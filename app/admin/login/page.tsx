@@ -38,12 +38,12 @@ export default function AdminLoginPage() {
           <h1 className="text-2xl font-bold text-white tracking-wide">
             ATLANTIC SERVICES LLC
           </h1>
-          <p className="text-[#E8951A] text-sm mt-1">Sistema RPA de Cotizaciones</p>
+          <p className="text-[#C9A84C] text-sm mt-1">Sistema RPA de Cotizaciones</p>
         </div>
 
         {/* Card */}
         <div className="bg-[#1C1C1C] rounded-xl p-8 shadow-2xl">
-          <h2 className="text-[#E8951A] font-bold text-lg mb-6">Iniciar Sesión</h2>
+          <h2 className="text-[#C9A84C] font-bold text-lg mb-6">Iniciar Sesión</h2>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
@@ -55,7 +55,7 @@ export default function AdminLoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E8951A] transition-colors"
+                className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#C9A84C] transition-colors"
                 placeholder="operador@atlanticser.com"
               />
             </div>
@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E8951A] transition-colors"
+                className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#C9A84C] transition-colors"
                 placeholder="••••••••"
               />
             </div>
@@ -83,7 +83,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#E8951A] hover:bg-[#C97B10] disabled:bg-gray-600 text-black font-bold py-3 rounded-lg transition-colors"
+              className="w-full bg-[#C9A84C] hover:bg-[#C97B10] disabled:bg-gray-600 text-black font-bold py-3 rounded-lg transition-colors"
             >
               {loading ? 'Ingresando...' : 'INGRESAR'}
             </button>

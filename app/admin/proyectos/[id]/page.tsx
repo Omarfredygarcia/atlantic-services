@@ -231,7 +231,7 @@ export default function ProyectoFormPage() {
       {/* Navbar */}
       <nav className="bg-[#1C1C1C] border-b border-[#333] px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-[#E8951A] text-xl">⬡</span>
+          <span className="text-[#C9A84C] text-xl">⬡</span>
           <span className="text-white font-bold text-sm">
             {isNuevo ? 'Nuevo Proyecto' : `Editar — ${proyecto.project_code}`}
           </span>
@@ -249,10 +249,10 @@ export default function ProyectoFormPage() {
         {/* Datos del cliente */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-[#E8951A] font-bold text-sm uppercase tracking-wider">
+            <h2 className="text-[#C9A84C] font-bold text-sm uppercase tracking-wider">
               Datos del Cliente
             </h2>
-            <div className="flex-1 h-px bg-[#E8951A]" />
+            <div className="flex-1 h-px bg-[#C9A84C]" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -269,7 +269,7 @@ export default function ProyectoFormPage() {
                   value={(proyecto as any)[f.key] || ''}
                   onChange={e => setProyecto(prev => ({ ...prev, [f.key]: e.target.value }))}
                   placeholder={f.placeholder}
-                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E8951A] text-sm"
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#C9A84C] text-sm"
                 />
               </div>
             ))}
@@ -279,7 +279,7 @@ export default function ProyectoFormPage() {
               <select
                 value={proyecto.tipo_proyecto || ''}
                 onChange={e => setProyecto(prev => ({ ...prev, tipo_proyecto: e.target.value }))}
-                className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E8951A] text-sm"
+                className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#C9A84C] text-sm"
               >
                 <option value="">Seleccionar...</option>
                 {TIPOS_PROYECTO.map(t => <option key={t} value={t}>{t}</option>)}
@@ -293,7 +293,7 @@ export default function ProyectoFormPage() {
                 value={proyecto.direccion || ''}
                 onChange={e => setProyecto(prev => ({ ...prev, direccion: e.target.value }))}
                 placeholder="123 Main St, Indianapolis, IN 46268"
-                className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E8951A] text-sm"
+                className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#C9A84C] text-sm"
               />
             </div>
           </div>
@@ -304,7 +304,7 @@ export default function ProyectoFormPage() {
               value={proyecto.descripcion || ''}
               onChange={e => setProyecto(prev => ({ ...prev, descripcion: e.target.value }))}
               rows={3}
-              className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#E8951A] text-sm resize-none"
+              className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#C9A84C] text-sm resize-none"
               placeholder="Detalles del proyecto..."
             />
           </div>
@@ -313,11 +313,11 @@ export default function ProyectoFormPage() {
         {/* Materiales */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-[#E8951A] font-bold text-sm uppercase tracking-wider">Materiales</h2>
-            <div className="flex-1 h-px bg-[#E8951A]" />
+            <h2 className="text-[#C9A84C] font-bold text-sm uppercase tracking-wider">Materiales</h2>
+            <div className="flex-1 h-px bg-[#C9A84C]" />
             <button
               onClick={agregarMaterial}
-              className="bg-[#E8951A] hover:bg-[#C97B10] text-black font-bold text-sm px-4 py-2 rounded-lg"
+              className="bg-[#C9A84C] hover:bg-[#C97B10] text-black font-bold text-sm px-4 py-2 rounded-lg"
             >
               + Agregar Material
             </button>
@@ -326,7 +326,7 @@ export default function ProyectoFormPage() {
           <div className="bg-[#1C1C1C] rounded-xl border border-[#333] overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="bg-[#E8951A]">
+                <tr className="bg-[#C9A84C]">
                   {['#','Categoría','Material','Área ft²','Tienda','Precio Unit.','Costo Total',''].map(h => (
                     <th key={h} className="text-black font-bold text-xs px-3 py-2 text-left">{h}</th>
                   ))}
@@ -368,7 +368,7 @@ export default function ProyectoFormPage() {
           <button
             onClick={guardar}
             disabled={guardando}
-            className="bg-[#E8951A] hover:bg-[#C97B10] disabled:bg-gray-600 text-black font-bold px-8 py-3 rounded-lg transition-colors"
+            className="bg-[#C9A84C] hover:bg-[#C97B10] disabled:bg-gray-600 text-black font-bold px-8 py-3 rounded-lg transition-colors"
           >
             {guardando ? 'Guardando...' : '💾 Guardar Proyecto'}
           </button>

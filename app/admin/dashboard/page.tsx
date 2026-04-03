@@ -119,7 +119,7 @@ export default function DashboardPage() {
       {/* Navbar */}
       <nav className="bg-[#1C1C1C] border-b border-[#333] px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-[#E8951A] text-xl">⬡</span>
+          <span className="text-[#C9A84C] text-xl">⬡</span>
           <span className="text-white font-bold text-sm">ATLANTIC SERVICES — RPA</span>
         </div>
         <div className="flex items-center gap-4">
@@ -154,7 +154,7 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3 mb-4 flex-wrap">
           <button
             onClick={() => router.push('/admin/proyectos/nuevo')}
-            className="bg-[#E8951A] hover:bg-[#C97B10] text-black font-bold px-5 py-2 rounded-lg transition-colors"
+            className="bg-[#C9A84C] hover:bg-[#C97B10] text-black font-bold px-5 py-2 rounded-lg transition-colors"
           >
             + Nuevo Proyecto
           </button>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
         <div className="bg-[#1C1C1C] rounded-xl border border-[#333] overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-[#E8951A]">
+              <tr className="bg-[#C9A84C]">
                 {['ID Proyecto','Cliente','Tipo','Área ft²','Estado','Último Paso','Fecha','Acciones'].map(h => (
                   <th key={h} className="text-black font-bold text-sm px-4 py-3 text-left">{h}</th>
                 ))}
@@ -220,7 +220,7 @@ export default function DashboardPage() {
                   className={`border-t border-[#333] hover:bg-[#252525] transition-colors cursor-pointer ${i%2===0?'':'bg-[#1A1A1A]'}`}
                   onClick={() => router.push(`/admin/proyectos/${p.id}`)}
                 >
-                  <td className="px-4 py-3 text-[#E8951A] font-mono text-sm font-bold">{p.project_code}</td>
+                  <td className="px-4 py-3 text-[#C9A84C] font-mono text-sm font-bold">{p.project_code}</td>
                   <td className="px-4 py-3">
                     <p className="text-white text-sm">{p.cliente_nombre}</p>
                     <p className="text-gray-500 text-xs">{p.cliente_email}</p>
@@ -240,7 +240,7 @@ export default function DashboardPage() {
                     <div className="flex gap-2 flex-wrap">
                       <button
                         onClick={() => router.push(`/admin/proyectos/${p.id}`)}
-                        className="bg-[#333] hover:bg-[#E8951A] hover:text-black text-white text-xs px-3 py-1 rounded transition-colors"
+                        className="bg-[#333] hover:bg-[#C9A84C] hover:text-black text-white text-xs px-3 py-1 rounded transition-colors"
                       >
                         Editar
                       </button>

@@ -81,17 +81,17 @@ function BeforeAfterSlider({ before, after, title, category }: { before: string;
           <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover" style={{ width: `${10000 / sliderPos}%` }} />
         </div>
         <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10" style={{ left: `${sliderPos}%` }}>
-          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-[#E8951A] border-2 border-white flex items-center justify-center shadow-lg">
+          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-[#C9A84C] border-2 border-white flex items-center justify-center shadow-lg">
             <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-5 h-5">
               <path d="M9 18l-6-6 6-6M15 6l6 6-6 6"/>
             </svg>
           </div>
         </div>
         <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">Before</div>
-        <div className="absolute top-3 right-3 bg-[#E8951A] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">After</div>
+        <div className="absolute top-3 right-3 bg-[#C9A84C] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">After</div>
       </div>
       <div className="p-5 bg-[#3D4F5C]">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#E8951A] mb-1">{category}</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#C9A84C] mb-1">{category}</p>
         <h3 className="font-serif text-lg font-semibold text-white">{title}</h3>
         <p className="text-xs text-white/50 mt-1">Drag the slider to see the transformation</p>
       </div>
@@ -113,7 +113,7 @@ export default function Gallery() {
 
       {/* Hero */}
       <section className="bg-black py-16 px-6 md:px-10 text-center">
-        <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-3">Our work</p>
+        <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-3">Our work</p>
         <h1 className="font-serif text-5xl font-semibold text-white mb-5">Project Gallery</h1>
         <p className="text-lg text-white/60 font-light max-w-xl mx-auto">
           Real projects, real transformations. Drag the sliders to see before & after, or browse our full portfolio below.
@@ -123,7 +123,7 @@ export default function Gallery() {
       {/* Before & After */}
       <section className="bg-[#3D4F5C] py-16 px-6 md:px-10">
         <div className="text-center mb-10">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-2">Transformations</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-2">Transformations</p>
           <h2 className="font-serif text-4xl font-semibold text-white">Before & After</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -142,7 +142,7 @@ export default function Gallery() {
       {/* Photo Grid */}
       <section className="bg-gray-50 py-16 px-6 md:px-10">
         <div className="text-center mb-10">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-2">Portfolio</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-2">Portfolio</p>
           <h2 className="font-serif text-4xl font-semibold text-gray-900 mb-8">All Projects</h2>
 
           {/* Category filters */}
@@ -153,8 +153,8 @@ export default function Gallery() {
                 onClick={() => setActiveCategory(cat)}
                 className={`px-5 py-2 text-sm font-semibold uppercase tracking-wider rounded-sm transition-colors ${
                   activeCategory === cat
-                    ? 'bg-[#E8951A] text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-[#E8951A] hover:text-[#E8951A]'
+                    ? 'bg-[#C9A84C] text-white'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C]'
                 }`}
               >
                 {cat}
@@ -176,7 +176,7 @@ export default function Gallery() {
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[#E8951A] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[#C9A84C] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm">
                   {img.category}
                 </div>
               </div>
@@ -192,7 +192,7 @@ export default function Gallery() {
           onClick={() => setLightbox(null)}
         >
           <button
-            className="absolute top-6 right-6 text-white text-4xl font-light hover:text-[#E8951A] transition-colors"
+            className="absolute top-6 right-6 text-white text-4xl font-light hover:text-[#C9A84C] transition-colors"
             onClick={() => setLightbox(null)}
           >
             ×

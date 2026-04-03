@@ -13,16 +13,16 @@ export default function Footer() {
           <SocialLinks />
         </div>
         <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-4">Navigation</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-4">Navigation</p>
           <div className="flex flex-col gap-3">
-            <span className="text-base text-white/70 cursor-pointer hover:text-[#E8951A] transition-colors">Services</span>
-            <span className="text-base text-white/70 cursor-pointer hover:text-[#E8951A] transition-colors">Projects</span>
-            <span className="text-base text-white/70 cursor-pointer hover:text-[#E8951A] transition-colors">About</span>
-            <span className="text-base text-white/70 cursor-pointer hover:text-[#E8951A] transition-colors">Contact</span>
+            <span className="text-base text-white/70 cursor-pointer hover:text-[#C9A84C] transition-colors">Services</span>
+            <span className="text-base text-white/70 cursor-pointer hover:text-[#C9A84C] transition-colors">Projects</span>
+            <span className="text-base text-white/70 cursor-pointer hover:text-[#C9A84C] transition-colors">About</span>
+            <span className="text-base text-white/70 cursor-pointer hover:text-[#C9A84C] transition-colors">Contact</span>
           </div>
         </div>
         <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-4">Contact</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-4">Contact</p>
           <div className="flex flex-col gap-3">
             <p className="text-base text-white/70">(317) 991-5878</p>
             <p className="text-base text-white/70">(317) 607-1196</p>
@@ -31,7 +31,7 @@ export default function Footer() {
           </div>
         </div>
         <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-[#E8951A] mb-4">Hours</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-4">Hours</p>
           <div className="flex flex-col gap-3">
             <p className="text-base text-white/70">Mon–Fri: 8:00am – 5:00pm</p>
             <p className="text-base text-white/70">Saturday: 9:00am – 12:00pm</p>

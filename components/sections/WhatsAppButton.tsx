@@ -17,7 +17,7 @@ export default function WhatsAppButton() {
   const box2 = pulse ? 'absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-50' : 'absolute inset-0 rounded-full bg-[#25D366] opacity-0'
 
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer" className="fixed bottom-6 right-6 z-50 group flex items-center gap-2" aria-label="Contact us on WhatsApp">
+    <a href={url} target="_blank" rel="noopener noreferrer" className="fixed bottom-24 right-6 z-50 group flex items-center gap-2" aria-label="Contact us on WhatsApp">
       <span className="hidden group-hover:block bg-gray-800 text-white text-xs px-3 py-1 rounded-full whitespace-nowrap">Free Estimate!</span>
       <div className={box1}>
         <div className={box2} />
