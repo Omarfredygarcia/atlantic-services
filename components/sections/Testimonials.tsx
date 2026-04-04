@@ -23,16 +23,16 @@ export default function Testimonials() {
   return (
     <section className="bg-white px-10 py-16">
       <div className="text-center mb-12">
-        <p className="text-sm font-semibold uppercase tracking-widest text-[#C9A84C] mb-3">Client reviews</p>
+        <p className="text-sm font-semibold uppercase tracking-widest text-[#E2B84A] mb-3">Client reviews</p>
         <h2 className="font-serif text-5xl font-semibold text-gray-900 mb-5">What our clients say</h2>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {testimonials.map((t, index) => (
-          <div key={index} className="bg-white border-2 border-gray-100 rounded-sm p-7 hover:border-[#C9A84C] transition-colors group">
-            <p className="text-[#C9A84C] tracking-widest mb-4 text-lg">★★★★★</p>
+          <div key={index} className="bg-white border-2 border-gray-100 rounded-sm p-7 hover:border-[#E2B84A] transition-colors group">
+            <p className="text-[#E2B84A] tracking-widest mb-4 text-lg">★★★★★</p>
             <p className="text-base text-gray-600 leading-relaxed italic mb-6 font-light">"{t.text}"</p>
             <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
-              <div className="w-10 h-10 rounded-full bg-[#C9A84C] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-[#E2B84A] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                 {t.initials}
               </div>
               <div>

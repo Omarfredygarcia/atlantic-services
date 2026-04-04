@@ -15,21 +15,21 @@ export default function Hero() {
       <div className="absolute inset-0 bg-black/70"></div>
 
       <div className="relative z-10 px-16 py-20 max-w-4xl">
-        <p className="text-sm font-semibold tracking-[0.25em] uppercase text-[#C9A84C] mb-6">
+        <p className="text-sm font-semibold tracking-[0.25em] uppercase text-[#E2B84A] mb-6">
           Indianapolis, Indiana · Licensed & Insured
         </p>
         <h1 className="font-serif text-6xl md:text-7xl font-semibold text-white leading-tight mb-8">
           Building on the<br />Principle of{' '}
-          <em className="text-[#C9A84C] not-italic border-b-4 border-[#C9A84C]">Integrity</em>
+          <em className="text-[#E2B84A] not-italic border-b-4 border-[#E2B84A]">Integrity</em>
         </h1>
         <p className="text-xl font-light text-white/75 leading-relaxed mb-10 max-w-2xl">
           From flooring and painting to full-scale restoration and commercial construction — precision craftsmanship, delivered on time and on budget.
         </p>
         <div className="flex gap-4 flex-wrap">
-          <a href="/#contact" className="text-sm font-bold uppercase tracking-wider px-6 py-3 bg-[#C9A84C] text-white rounded-sm hover:bg-[#d4841a] transition-colors">
+          <a href="/#contact" className="text-sm font-bold uppercase tracking-wider px-6 py-3 bg-[#E2B84A] text-white rounded-sm hover:bg-[#c49a2e] transition-colors">
             Free Estimate
           </a>
-          <a href="/gallery" className="px-10 py-4 border-2 border-white/40 text-white text-sm font-medium uppercase tracking-wider rounded-sm hover:border-[#C9A84C] hover:text-[#C9A84C] transition-colors">
+          <a href="/gallery" className="px-10 py-4 border-2 border-white/40 text-white text-sm font-medium uppercase tracking-wider rounded-sm hover:border-[#E2B84A] hover:text-[#E2B84A] transition-colors">
             View Our Work →
           </a>
         </div>

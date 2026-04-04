@@ -29,7 +29,7 @@ export default function AIVisualizer() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-6 z-40 flex items-center gap-2 bg-[#1a1a1a] border-2 border-[#C9A84C] text-white px-4 py-3 rounded-full shadow-2xl hover:bg-[#C9A84C] transition-all duration-300 hover:scale-105 mb-16 md:mb-0"
+        className="fixed bottom-8 right-6 z-40 flex items-center gap-2 bg-[#1a1a1a] border-2 border-[#E2B84A] text-white px-4 py-3 rounded-full shadow-2xl hover:bg-[#E2B84A] transition-all duration-300 hover:scale-105 mb-16 md:mb-0"
       >
         <div className="relative">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-6 h-6">
@@ -56,7 +56,7 @@ export default function AIVisualizer() {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-black">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#C9A84C] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-[#E2B84A] flex items-center justify-center">
                   <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4">
                     <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                   </svg>
@@ -90,7 +90,7 @@ export default function AIVisualizer() {
               />
               {/* Video overlay info */}
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-5">
-                <p className="text-[#C9A84C] text-xs font-bold uppercase tracking-wider mb-1">
+                <p className="text-[#E2B84A] text-xs font-bold uppercase tracking-wider mb-1">
                   {videos[activeVideo].title}
                 </p>
                 <p className="text-white/80 text-sm font-light">
@@ -107,7 +107,7 @@ export default function AIVisualizer() {
                   onClick={() => setActiveVideo(index)}
                   className={`rounded-full transition-all duration-300 ${
                     activeVideo === index
-                      ? 'w-6 h-2.5 bg-[#C9A84C]'
+                      ? 'w-6 h-2.5 bg-[#E2B84A]'
                       : 'w-2.5 h-2.5 bg-white/30 hover:bg-white/60'
                   }`}
                 />
@@ -121,7 +121,7 @@ export default function AIVisualizer() {
               </p>
               
 <a   href="/#contact"
-  className="block w-full py-3 bg-[#C9A84C] text-white text-sm font-bold uppercase tracking-widest text-center rounded-sm hover:bg-[#d4841a] transition-colors"
+  className="block w-full py-3 bg-[#E2B84A] text-white text-sm font-bold uppercase tracking-widest text-center rounded-sm hover:bg-[#c49a2e] transition-colors"
 >
   Request AI Consultation
 </a>
