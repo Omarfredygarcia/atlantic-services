@@ -8,13 +8,13 @@ export default function Navbar() {
 
   return (
     <nav className="bg-black sticky top-0 z-50 border-b border-white/10">
-      <div className="flex justify-between items-center px-6 py-0">
+      <div className="flex justify-between items-center px-6 py-2">
         <a href="/">
           <Image
             src="/images/Logo-transparent.png"
             alt="Atlantic Services"
-            width={250}
-            height={100}
+            width={200}
+            height={80}
             className="object-contain"
             priority
           />
