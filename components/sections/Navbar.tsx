@@ -13,8 +13,8 @@ export default function Navbar() {
           <Image
             src="/images/Logo-transparent.png"
             alt="Atlantic Services"
-            width={150}
-            height={60}
+            width={200}
+            height={80}
             className="object-contain"
             priority
           />
