@@ -8,13 +8,13 @@ export default function Hero() {
         src="/images/hero.jpg"
         alt="Atlantic Services Project"
         fill
-        className="object-cover object-center"
+        className="object-cover object-left md:object-center"
         priority
       />
 
       <div className="absolute inset-0 bg-black/50"></div>
 
-      <div className="relative z-10 px-16 py-20 max-w-4xl">
+      <div className="relative z-10 px-6 md:px-16 py-12 md:py-20 max-w-4xl">
         <p className="text-sm font-semibold tracking-[0.25em] uppercase text-[#E2B84A] mb-6">
           Indianapolis, Indiana · Licensed & Insured
         </p>
