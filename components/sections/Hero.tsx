@@ -5,14 +5,14 @@ export default function Hero() {
     <section className="min-h-[600px] flex items-center relative overflow-hidden">
       
       <Image
-        src="/images/hero.webp"
+        src="/images/hero.jpg"
         alt="Atlantic Services Project"
         fill
         className="object-cover object-center"
         priority
       />
 
-      <div className="absolute inset-0 bg-black/70"></div>
+      <div className="absolute inset-0 bg-black/50"></div>
 
       <div className="relative z-10 px-16 py-20 max-w-4xl">
         <p className="text-sm font-semibold tracking-[0.25em] uppercase text-[#E2B84A] mb-6">
