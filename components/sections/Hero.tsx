@@ -8,7 +8,7 @@ export default function Hero() {
         src="/images/hero.jpg"
         alt="Atlantic Services Project"
         fill
-        className="object-cover object-left md:object-center"
+        className="object-cover object-[30%_center] md:object-center"
         priority
       />
 
