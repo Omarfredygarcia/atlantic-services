@@ -29,7 +29,8 @@ export default function AIVisualizer() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-6 z-40 flex items-center gap-2 bg-[#1a1a1a] border-2 border-[#E2B84A] text-white px-4 py-3 rounded-full shadow-2xl hover:bg-[#E2B84A] transition-all duration-300 hover:scale-105 mb-16 md:mb-0"
+        // DEFINITIVO — AI Visualizer sube más en móvil
+        className="fixed bottom-40 right-6 z-40 flex items-center gap-2 bg-[#1a1a1a] border-2 border-[#E2B84A] text-white px-4 py-3 rounded-full shadow-2xl hover:bg-[#E2B84A] transition-all duration-300 hover:scale-105 md:bottom-8"
       >
         <div className="relative">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-6 h-6">
