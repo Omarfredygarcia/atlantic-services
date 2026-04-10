@@ -16,7 +16,7 @@ export default function Hero() {
 
       <div className="relative z-10 px-6 md:px-16 py-16 md:py-20 max-w-4xl">
         <p className="text-xs md:text-sm font-semibold tracking-[0.25em] uppercase text-[#E2B84A] mb-4 md:mb-6">
-          Indianapolis, Indiana · Licensed & Insured
+          Indianapolis, IN · Licensed & Insured
         </p>
         <h1 className="font-serif text-4xl md:text-7xl font-semibold text-white leading-tight mb-6 md:mb-8">
           Building on the<br />Principle of{' '}
