@@ -23,8 +23,13 @@ const projects = [
     before: '/images/BEFORE_AFTER/bath_before.jpg',
     after: '/images/BEFORE_AFTER/bath_after.jpg',
   },
+  {
+    title: 'Commercial Build',
+    category: 'Commercial',
+    before: '/images/BEFORE_AFTER/comercial_before.jpg',
+    after: '/images/BEFORE_AFTER/comercial_after.jpg',
+  },
 ]
-
 const galleryImages = [
   { src: '/images/COMMERCIAL/0ee6bdc6-7987-4af3-b6cc-611df374452f.webp', category: 'Commercial' },
   { src: '/images/COMMERCIAL/tempImage1dHQVG.webp', category: 'Commercial' },
@@ -126,7 +131,7 @@ export default function Gallery() {
           <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-2">Transformations</p>
           <h2 className="font-serif text-4xl font-semibold text-white">Before & After</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
           {projects.map((project, index) => (
             <BeforeAfterSlider
               key={index}
