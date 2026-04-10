@@ -8,7 +8,7 @@ const projects = [
   {
     title: 'Commercial Build',
     category: 'Commercial',
-    before: '/images/BEFORE_AFTER/comercial_before.jpg',
+    before: '/images/BEFORE_AFTER/Comercial_Before.jpg',
     after: '/images/BEFORE_AFTER/comercial_after.jpg',
   },
   {
