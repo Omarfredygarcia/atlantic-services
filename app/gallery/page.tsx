@@ -32,6 +32,20 @@ const projects = [
 
 ]
 const galleryImages = [
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0025.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0035.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0053.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0058.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0074.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0076.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0002.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0003.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0005.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0030.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0045.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0046.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0054.jpg', category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0086.jpg', category: 'Commercial' },
   { src: '/images/COMMERCIAL/0ee6bdc6-7987-4af3-b6cc-611df374452f.webp', category: 'Commercial' },
   { src: '/images/COMMERCIAL/tempImage1dHQVG.webp', category: 'Commercial' },
   { src: '/images/COMMERCIAL/tempImage25xhxO.webp', category: 'Commercial' },
