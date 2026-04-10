@@ -82,29 +82,37 @@ function BeforeAfterSlider({ before, after, title, category }: { before: string;
         onMouseMove={(e) => { if (isDragging.current) handleMove(e.clientX) }}
         onTouchMove={(e) => handleMove(e.touches[0].clientX)}
       >
+        {/* AFTER — fondo completo */}
         <img src={after} alt="After" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 overflow-hidden" style={{ width: `${sliderPos}%` }}>
-          <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover" style={{ width: `${10000 / sliderPos}%` }} />
+
+        {/* BEFORE — recortado con clip */}
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
+        >
+          <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover" />
         </div>
+
+        {/* Divisor */}
         <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10" style={{ left: `${sliderPos}%` }}>
-          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-[#C9A84C] border-2 border-white flex items-center justify-center shadow-lg">
+          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-[#E2B84A] border-2 border-white flex items-center justify-center shadow-lg">
             <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-5 h-5">
               <path d="M9 18l-6-6 6-6M15 6l6 6-6 6"/>
             </svg>
           </div>
         </div>
+
         <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">Before</div>
-        <div className="absolute top-3 right-3 bg-[#C9A84C] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">After</div>
+        <div className="absolute top-3 right-3 bg-[#E2B84A] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">After</div>
       </div>
       <div className="p-5 bg-[#3D4F5C]">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[#C9A84C] mb-1">{category}</p>
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#E2B84A] mb-1">{category}</p>
         <h3 className="font-serif text-lg font-semibold text-white">{title}</h3>
         <p className="text-xs text-white/50 mt-1">Drag the slider to see the transformation</p>
       </div>
     </div>
   )
 }
-
 export default function Gallery() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [lightbox, setLightbox] = useState<string | null>(null)
