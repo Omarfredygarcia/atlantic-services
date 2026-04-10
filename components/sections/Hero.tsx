@@ -2,7 +2,7 @@ import Image from 'next/image'
 
 export default function Hero() {
   return (
-    <section className="min-h-[600px] flex items-center relative overflow-hidden">
+      <section className="min-h-[400px] md:min-h-[600px] flex items-center relative overflow-hidden">
       
       <Image
         src="/images/hero.jpg"
