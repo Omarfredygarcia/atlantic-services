@@ -3,8 +3,34 @@
 import { useState, useRef } from 'react'
 import Navbar from '@/components/sections/Navbar'
 import Footer from '@/components/sections/Footer'
-import { useLang } from '@/lib/LanguageContext'
 
+const projects = [
+  {
+    title: 'Commercial Build',
+    category: 'Commercial',
+    before: '/images/BEFORE_AFTER/Comercial_Before.jpg',
+    after: '/images/BEFORE_AFTER/comercial_after.jpg',
+  },
+  {
+    title: 'Kitchen Remodel',
+    category: 'Remodeling',
+    before: '/images/BEFORE_AFTER/Coke_before.jpg',
+    after: '/images/BEFORE_AFTER/Coke_after.jpg',
+  },
+  {
+    title: 'Kitchen Transformation',
+    category: 'Remodeling',
+    before: '/images/BEFORE_AFTER/Coke_before_2.jpg',
+    after: '/images/BEFORE_AFTER/Coke_after_2.jpg',
+  },
+  {
+    title: 'Bathroom Remodel',
+    category: 'Remodeling',
+    before: '/images/BEFORE_AFTER/bath_before.jpg',
+    after: '/images/BEFORE_AFTER/bath_after.jpg',
+  },
+
+]
 const galleryImages = [
   { src: '/images/COMMERCIAL/IMG-20260408-WA0025.jpg', category: 'Commercial' },
   { src: '/images/COMMERCIAL/IMG-20260408-WA0035.jpg', category: 'Commercial' },
@@ -45,22 +71,9 @@ const galleryImages = [
   { src: '/images/WATERPROOFING/IMG_3982.webp', category: 'Waterproofing' },
 ]
 
-const beforeAfterImages = [
-  { before: '/images/BEFORE_AFTER/Comercial_Before.jpg', after: '/images/BEFORE_AFTER/comercial_after.jpg' },
-  { before: '/images/BEFORE_AFTER/Coke_before.jpg',      after: '/images/BEFORE_AFTER/Coke_after.jpg' },
-  { before: '/images/BEFORE_AFTER/Coke_before_2.jpg',    after: '/images/BEFORE_AFTER/Coke_after_2.jpg' },
-  { before: '/images/BEFORE_AFTER/bath_before.jpg',      after: '/images/BEFORE_AFTER/bath_after.jpg' },
-]
+const categories = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
 
-// Category keys in English (used for filtering galleryImages)
-const categoryKeys = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
-
-function BeforeAfterSlider({
-  before, after, title, category, sliderHint, sliderBefore, sliderAfter
-}: {
-  before: string; after: string; title: string; category: string
-  sliderHint: string; sliderBefore: string; sliderAfter: string
-}) {
+function BeforeAfterSlider({ before, after, title, category }: { before: string; after: string; title: string; category: string }) {
   const [sliderPos, setSliderPos] = useState(50)
   const containerRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -83,10 +96,18 @@ function BeforeAfterSlider({
         onMouseMove={(e) => { if (isDragging.current) handleMove(e.clientX) }}
         onTouchMove={(e) => handleMove(e.touches[0].clientX)}
       >
+        {/* AFTER — fondo completo */}
         <img src={after} alt="After" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}>
+
+        {/* BEFORE — recortado con clip */}
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
+        >
           <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover" />
         </div>
+
+        {/* Divisor */}
         <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10" style={{ left: `${sliderPos}%` }}>
           <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-[#E2B84A] border-2 border-white flex items-center justify-center shadow-lg">
             <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-5 h-5">
@@ -94,31 +115,25 @@ function BeforeAfterSlider({
             </svg>
           </div>
         </div>
-        <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">{sliderBefore}</div>
-        <div className="absolute top-3 right-3 bg-[#E2B84A] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">{sliderAfter}</div>
+
+        <div className="absolute top-3 left-3 bg-black/60 text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">Before</div>
+        <div className="absolute top-3 right-3 bg-[#E2B84A] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-sm">After</div>
       </div>
       <div className="p-5 bg-[#3D4F5C]">
         <p className="text-xs font-semibold uppercase tracking-widest text-[#E2B84A] mb-1">{category}</p>
         <h3 className="font-serif text-lg font-semibold text-white">{title}</h3>
-        <p className="text-xs text-white/50 mt-1">{sliderHint}</p>
+        <p className="text-xs text-white/50 mt-1">Drag the slider to see the transformation</p>
       </div>
     </div>
   )
 }
-
 export default function Gallery() {
-  const { t, lang } = useLang()
-  const g = t.gallery
-
-  const [activeCategoryIndex, setActiveCategoryIndex] = useState(0)
+  const [activeCategory, setActiveCategory] = useState('All')
   const [lightbox, setLightbox] = useState<string | null>(null)
 
-  const activeKeyword = categoryKeys[activeCategoryIndex]
-  const filtered = activeKeyword === 'All'
+  const filtered = activeCategory === 'All'
     ? galleryImages
-    : galleryImages.filter(img => img.category === activeKeyword)
-
-  const projects = g.projects.map((p, i) => ({ ...p, ...beforeAfterImages[i] }))
+    : galleryImages.filter(img => img.category === activeCategory)
 
   return (
     <main>
@@ -126,16 +141,18 @@ export default function Gallery() {
 
       {/* Hero */}
       <section className="bg-black py-16 px-6 md:px-10 text-center">
-        <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-3">{g.badge}</p>
-        <h1 className="font-serif text-5xl font-semibold text-white mb-5">{g.title}</h1>
-        <p className="text-lg text-white/60 font-light max-w-xl mx-auto">{g.subtitle}</p>
+        <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-3">Our work</p>
+        <h1 className="font-serif text-5xl font-semibold text-white mb-5">Project Gallery</h1>
+        <p className="text-lg text-white/60 font-light max-w-xl mx-auto">
+          Real projects, real transformations. Drag the sliders to see before & after, or browse our full portfolio below.
+        </p>
       </section>
 
       {/* Before & After */}
       <section className="bg-[#3D4F5C] py-16 px-6 md:px-10">
         <div className="text-center mb-10">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-2">{g.transformationsBadge}</p>
-          <h2 className="font-serif text-4xl font-semibold text-white">{g.transformationsTitle}</h2>
+          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-2">Transformations</p>
+          <h2 className="font-serif text-4xl font-semibold text-white">Before & After</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
           {projects.map((project, index) => (
@@ -145,9 +162,6 @@ export default function Gallery() {
               after={project.after}
               title={project.title}
               category={project.category}
-              sliderHint={g.sliderHint}
-              sliderBefore={g.sliderBefore}
-              sliderAfter={g.sliderAfter}
             />
           ))}
         </div>
@@ -156,15 +170,17 @@ export default function Gallery() {
       {/* Photo Grid */}
       <section className="bg-gray-50 py-16 px-6 md:px-10">
         <div className="text-center mb-10">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-2">{g.portfolioBadge}</p>
-          <h2 className="font-serif text-4xl font-semibold text-gray-900 mb-8">{g.portfolioTitle}</h2>
+          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-2">Portfolio</p>
+          <h2 className="font-serif text-4xl font-semibold text-gray-900 mb-8">All Projects</h2>
+
+          {/* Category filters */}
           <div className="flex flex-wrap justify-center gap-3 mb-10">
-            {g.categories.map((cat, index) => (
+            {categories.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setActiveCategoryIndex(index)}
+                onClick={() => setActiveCategory(cat)}
                 className={`px-5 py-2 text-sm font-semibold uppercase tracking-wider rounded-sm transition-colors ${
-                  activeCategoryIndex === index
+                  activeCategory === cat
                     ? 'bg-[#C9A84C] text-white'
                     : 'bg-white border border-gray-200 text-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C]'
                 }`}
@@ -182,10 +198,14 @@ export default function Gallery() {
               className="relative aspect-square overflow-hidden rounded-sm cursor-pointer group"
               onClick={() => setLightbox(img.src)}
             >
-              <img src={img.src} alt={img.category} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <img
+                src={img.src}
+                alt={img.category}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[#C9A84C] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm">
-                  {g.categories[index < g.categories.length ? activeCategoryIndex : 0]}
+                  {img.category}
                 </div>
               </div>
             </div>
@@ -195,9 +215,22 @@ export default function Gallery() {
 
       {/* Lightbox */}
       {lightbox && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
-          <button className="absolute top-6 right-6 text-white text-4xl font-light hover:text-[#C9A84C] transition-colors" onClick={() => setLightbox(null)}>×</button>
-          <img src={lightbox} alt="Project" className="max-w-full max-h-full object-contain rounded-sm" onClick={(e) => e.stopPropagation()} />
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute top-6 right-6 text-white text-4xl font-light hover:text-[#C9A84C] transition-colors"
+            onClick={() => setLightbox(null)}
+          >
+            ×
+          </button>
+          <img
+            src={lightbox}
+            alt="Project"
+            className="max-w-full max-h-full object-contain rounded-sm"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 

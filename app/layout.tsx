@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Barlow, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import WhatsAppButton from '@/components/sections/WhatsAppButton'
+import { LanguageProvider } from '@/lib/LanguageContext'
 
 const barlow = Barlow({
   subsets: ['latin'],
@@ -19,16 +20,14 @@ export const metadata: Metadata = {
   description: 'Professional construction, flooring, painting, restoration and more in Indianapolis, Indiana.',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className={`${barlow.variable} ${playfair.variable} font-sans`}>
-        {children}
-        <WhatsAppButton />
+        <LanguageProvider>
+          {children}
+          <WhatsAppButton />
+        </LanguageProvider>
       </body>
     </html>
   )
