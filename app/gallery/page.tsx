@@ -112,7 +112,7 @@ const beforeAfterImages = [
 // El ID es la parte final de la URL: https://youtu.be/AQUI_VA_EL_ID
 const galleryVideos = [
   { youtubeId: 'REEMPLAZAR_ID', category: 'Commercial', title: 'Commercial 1' },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Commercial', title: 'Commercial 2' },
+  { youtubeId: 'S6Ajay9I7V0', category: 'Commercial', title: 'Commercial 2' },
   { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 1'   },
   { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 2'   },
   { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 3'   },
