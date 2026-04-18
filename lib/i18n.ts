@@ -18,7 +18,7 @@ export const translations = {
       ctaSecondary: 'View Our Work →',
     },
     stats: [
-      { number: '15+', label: 'Years of experience' },
+      { number: '30+', label: 'Years of experience' },
       { number: '500+', label: 'Projects completed' },
       { number: 'A+', label: 'BBB Rating' },
       { number: '100%', label: 'Licensed & insured' },
@@ -132,9 +132,9 @@ export const translations = {
       title2: 'Driven by',
       titleHighlight: 'Excellence.',
       subtitle:
-        'Atlantic Services is a general construction company based in Indianapolis, Indiana. For over 15 years we have delivered quality craftsmanship across residential, commercial and specialized construction projects.',
+        'Atlantic Services is a general construction company based in Indianapolis, Indiana. For over 30 years we have delivered quality craftsmanship across residential, commercial and specialized construction projects.',
       stats: [
-        { number: '15+', label: 'Years of experience' },
+        { number: '30+', label: 'Years of experience' },
         { number: '500+', label: 'Projects completed' },
         { number: 'A+', label: 'BBB Rating' },
         { number: '100%', label: 'Licensed & insured' },
@@ -142,11 +142,11 @@ export const translations = {
       storyBadge: 'Our story',
       storyTitle: 'A Legacy of Quality Construction',
       storyP1:
-        'Atlantic Services was founded with a simple mission — to deliver construction projects that stand the test of time. From our first project in Indianapolis, we have grown into a trusted name in the region.',
+        'Atlantic Services was founded with a simple mission — to deliver construction projects that stand the test of time. From our first project in Indianapolis, we have grown into a trusted name across the Midwest.',
       storyP2:
         "Our team of experienced craftsmen, project managers and designers work together to bring every client's vision to life — on time, on budget and beyond expectations.",
       storyP3:
-        'We are proud to be BBB A+ accredited, fully licensed and insured, serving Indianapolis and surrounding areas including Carmel, Fishers, Zionsville and Westfield.',
+        'We are proud to be BBB A+ accredited, fully licensed and insured, serving Indianapolis and surrounding areas including Carmel, Fishers, Zionsville and Westfield, as well as neighboring states including Illinois, Ohio, Michigan and Kentucky.',
       quote: "We don't just build structures — we build relationships.",
       quoteAuthor: 'Atlantic Services Team',
       quoteLocation: 'Indianapolis, Indiana',
@@ -186,6 +186,8 @@ export const translations = {
       sliderAfter: 'After',
       portfolioBadge: 'Portfolio',
       portfolioTitle: 'All Projects',
+      tabPhotos: 'Photos',
+      tabVideos: 'Videos',
       categories: ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing'],
       projects: [
         {
@@ -259,7 +261,7 @@ export const translations = {
       ctaSecondary: 'Ver Nuestros Trabajos →',
     },
     stats: [
-      { number: '15+', label: 'Años de experiencia' },
+      { number: '30+', label: 'Años de experiencia' },
       { number: '500+', label: 'Proyectos completados' },
       { number: 'A+', label: 'Calificación BBB' },
       { number: '100%', label: 'Licenciados y asegurados' },
@@ -373,9 +375,9 @@ export const translations = {
       title2: 'Impulsados por la',
       titleHighlight: 'Excelencia.',
       subtitle:
-        'Atlantic Services es una empresa de construcción general con sede en Indianapolis, Indiana. Durante más de 15 años hemos entregado trabajos de calidad en proyectos residenciales, comerciales y especializados.',
+        'Atlantic Services es una empresa de construcción general con sede en Indianapolis, Indiana. Durante más de 30 años hemos entregado trabajos de calidad en proyectos residenciales, comerciales y especializados.',
       stats: [
-        { number: '15+', label: 'Años de experiencia' },
+        { number: '30+', label: 'Años de experiencia' },
         { number: '500+', label: 'Proyectos completados' },
         { number: 'A+', label: 'Calificación BBB' },
         { number: '100%', label: 'Licenciados y asegurados' },
@@ -383,11 +385,11 @@ export const translations = {
       storyBadge: 'Nuestra historia',
       storyTitle: 'Un legado de construcción de calidad',
       storyP1:
-        'Atlantic Services fue fundada con una misión simple — entregar proyectos de construcción que resistan el paso del tiempo. Desde nuestro primer proyecto en Indianapolis, hemos crecido hasta convertirnos en un nombre de confianza en la región.',
+        'Atlantic Services fue fundada con una misión simple — entregar proyectos de construcción que resistan el paso del tiempo. Desde nuestro primer proyecto en Indianapolis, hemos crecido hasta convertirnos en un nombre de confianza en todo el Medio Oeste.',
       storyP2:
         'Nuestro equipo de artesanos experimentados, gerentes de proyectos y diseñadores trabajan juntos para dar vida a la visión de cada cliente — a tiempo, dentro del presupuesto y superando expectativas.',
       storyP3:
-        'Nos enorgullece estar acreditados BBB A+, completamente licenciados y asegurados, sirviendo a Indianapolis y áreas cercanas incluyendo Carmel, Fishers, Zionsville y Westfield.',
+        'Nos enorgullece estar acreditados BBB A+, completamente licenciados y asegurados, sirviendo a Indianapolis y áreas cercanas incluyendo Carmel, Fishers, Zionsville y Westfield, así como estados vecinos como Illinois, Ohio, Michigan y Kentucky.',
       quote: 'No solo construimos estructuras — construimos relaciones.',
       quoteAuthor: 'Equipo Atlantic Services',
       quoteLocation: 'Indianapolis, Indiana',
@@ -427,6 +429,8 @@ export const translations = {
       sliderAfter: 'Después',
       portfolioBadge: 'Portafolio',
       portfolioTitle: 'Todos los Proyectos',
+      tabPhotos: 'Fotos',
+      tabVideos: 'Videos',
       categories: ['Todos', 'Comercial', 'Interior', 'Exterior', 'Remodelación', 'Impermeabilización'],
       projects: [
         {
