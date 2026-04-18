@@ -6,55 +6,127 @@ import Footer from '@/components/sections/Footer'
 import { useLang } from '@/lib/LanguageContext'
 
 const galleryImages = [
-  { src: '/images/COMMERCIAL/IMG-20260408-WA0025.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260408-WA0035.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260408-WA0053.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260408-WA0058.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260408-WA0074.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260408-WA0076.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260409-WA0002.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260409-WA0003.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260409-WA0005.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260409-WA0030.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260409-WA0045.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260409-WA0046.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260409-WA0054.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/IMG-20260409-WA0086.jpg', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/0ee6bdc6-7987-4af3-b6cc-611df374452f.webp', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/tempImage1dHQVG.webp', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/tempImage25xhxO.webp', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/tempImageJ46ZJ1.webp', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/tempImageLaWE9B.webp', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/tempImageSrA35c.webp', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/tempImageqoAuKg.webp', category: 'Commercial' },
-  { src: '/images/COMMERCIAL/tempImagevvASAe.webp', category: 'Commercial' },
-  { src: '/images/INTERIOR/IMG_4735.webp', category: 'Interior' },
-  { src: '/images/INTERIOR/PHOTO-2023-05-02-17-56-49+29.webp', category: 'Interior' },
-  { src: '/images/INTERIOR/PHOTO-2023-05-02-17-56-54.webp', category: 'Interior' },
-  { src: '/images/INTERIOR/fe8b726d-e64c-410f-9678-6b5b553d282b.webp', category: 'Interior' },
-  { src: '/images/INTERIOR/tempImageg5ncA9.webp', category: 'Interior' },
-  { src: '/images/EXTERIOR/d7fbda8b-3fee-401f-949b-94bc17143fc9.webp', category: 'Exterior' },
-  { src: '/images/REMODELING/tempImageMtSaY6.webp', category: 'Remodeling' },
-  { src: '/images/REMODELING/tempImagesDXud9.webp', category: 'Remodeling' },
-  { src: '/images/REMODELING/tempImagezZmvwQ.webp', category: 'Remodeling' },
-  { src: '/images/WATERPROOFING/IMG_3976.webp', category: 'Waterproofing' },
-  { src: '/images/WATERPROOFING/IMG_3977.webp', category: 'Waterproofing' },
-  { src: '/images/WATERPROOFING/IMG_3979.webp', category: 'Waterproofing' },
-  { src: '/images/WATERPROOFING/IMG_3980.webp', category: 'Waterproofing' },
-  { src: '/images/WATERPROOFING/IMG_3981.webp', category: 'Waterproofing' },
-  { src: '/images/WATERPROOFING/IMG_3982.webp', category: 'Waterproofing' },
+  // ── COMMERCIAL ──────────────────────────────────────────────────────────────
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0025.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0035.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0053.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0058.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0074.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260408-WA0076.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0002.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0003.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0005.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0030.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0045.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0046.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0054.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/IMG-20260409-WA0086.jpg',                        category: 'Commercial' },
+  { src: '/images/COMMERCIAL/0ee6bdc6-7987-4af3-b6cc-611df374452f.webp',      category: 'Commercial' },
+  { src: '/images/COMMERCIAL/12d58aef-6dc7-4e5c-84bf-0a5b3f85c153.webp',      category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImage1dHQVG.webp',                           category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImage25xhxO.webp',                           category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImageJ46ZJ1.webp',                           category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImageLaWE9B.webp',                           category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImageSrA35c.webp',                           category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImageqoAuKg.webp',                           category: 'Commercial' },
+  { src: '/images/COMMERCIAL/tempImagevvASAe.webp',                           category: 'Commercial' },
+
+  // ── INTERIOR ────────────────────────────────────────────────────────────────
+  { src: '/images/INTERIOR/IMG_4735.webp',                                    category: 'Interior' },
+  { src: '/images/INTERIOR/PHOTO-2023-05-02-17-56-49+29.webp',                category: 'Interior' },
+  { src: '/images/INTERIOR/PHOTO-2023-05-02-17-56-54.webp',                   category: 'Interior' },
+  { src: '/images/INTERIOR/PHOTO-2023-05-02-17-56-54 (1).webp',               category: 'Interior' },
+  { src: '/images/INTERIOR/fe8b726d-e64c-410f-9678-6b5b553d282b.webp',        category: 'Interior' },
+  { src: '/images/INTERIOR/12d58aef-6dc7-4e5c-84bf-0a5b3f85c153.webp',        category: 'Interior' },
+  { src: '/images/INTERIOR/tempImageg5ncA9.webp',                             category: 'Interior' },
+  { src: '/images/INTERIOR/interior_01.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_02.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_03.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_04.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_05.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_06.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_07.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_08.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_09.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_10.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_11.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_12.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_13.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_14.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_15.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_16.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_17.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_18.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_19.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_20.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_21.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_22.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_23.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_24.jpg',                                  category: 'Interior' },
+  { src: '/images/INTERIOR/interior_25.jpg',                                  category: 'Interior' },
+
+  // ── EXTERIOR ────────────────────────────────────────────────────────────────
+  { src: '/images/EXTERIOR/d7fbda8b-3fee-401f-949b-94bc17143fc9.webp',        category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_facade_01.jpg',                           category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_facade_02.jpg',                           category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_window.jpg',                              category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_window_wood.jpg',                         category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_08.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_09.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_10.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_11.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_12.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_13.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_14.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_15.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_16.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_17.jpg',                                  category: 'Exterior' },
+  { src: '/images/EXTERIOR/exterior_18.jpg',                                  category: 'Exterior' },
+
+  // ── REMODELING ──────────────────────────────────────────────────────────────
+  { src: '/images/REMODELING/tempImageMtSaY6.webp',                           category: 'Remodeling' },
+  { src: '/images/REMODELING/tempImageMtSaY6 (1).webp',                       category: 'Remodeling' },
+  { src: '/images/REMODELING/tempImagesDXud9.webp',                           category: 'Remodeling' },
+  { src: '/images/REMODELING/tempImagesDXud9 (1).webp',                       category: 'Remodeling' },
+  { src: '/images/REMODELING/tempImagezZmvwQ.webp',                           category: 'Remodeling' },
+  { src: '/images/REMODELING/tempImagezZmvwQ (1).webp',                       category: 'Remodeling' },
+
+  // ── WATERPROOFING ───────────────────────────────────────────────────────────
+  { src: '/images/WATERPROOFING/IMG_3976.webp',                               category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3977.webp',                               category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3979.webp',                               category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3980.webp',                               category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3981.webp',                               category: 'Waterproofing' },
+  { src: '/images/WATERPROOFING/IMG_3982.webp',                               category: 'Waterproofing' },
 ]
 
 const beforeAfterImages = [
-  { before: '/images/BEFORE_AFTER/Comercial_Before.jpg', after: '/images/BEFORE_AFTER/comercial_after.jpg' },
+  { before: '/images/BEFORE_AFTER/comercial_before.jpg', after: '/images/BEFORE_AFTER/comercial_after.jpg' },
   { before: '/images/BEFORE_AFTER/Coke_before.jpg',      after: '/images/BEFORE_AFTER/Coke_after.jpg' },
   { before: '/images/BEFORE_AFTER/Coke_before_2.jpg',    after: '/images/BEFORE_AFTER/Coke_after_2.jpg' },
   { before: '/images/BEFORE_AFTER/bath_before.jpg',      after: '/images/BEFORE_AFTER/bath_after.jpg' },
 ]
 
-// Category keys in English (used for filtering galleryImages)
-const categoryKeys = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
+// ── VIDEOS ────────────────────────────────────────────────────────────────────
+// Reemplaza cada youtubeId con el ID real después de subir a YouTube.
+// El ID es la parte final de la URL: https://youtu.be/AQUI_VA_EL_ID
+const galleryVideos = [
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Commercial', title: 'Commercial 1' },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Commercial', title: 'Commercial 2' },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 1'   },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 2'   },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 3'   },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 4'   },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Interior',   title: 'Interior 1'   },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Interior',   title: 'Interior 2'   },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Remodeling', title: 'Remodeling 1' },
+  { youtubeId: 'REEMPLAZAR_ID', category: 'Remodeling', title: 'Remodeling 2' },
+]
 
+const categoryKeys = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
+const videoCategoryKeys = ['All', 'Commercial', 'Exterior', 'Interior', 'Remodeling']
+
+// ── BEFORE/AFTER SLIDER ───────────────────────────────────────────────────────
 function BeforeAfterSlider({
   before, after, title, category, sliderHint, sliderBefore, sliderAfter
 }: {
@@ -106,11 +178,54 @@ function BeforeAfterSlider({
   )
 }
 
+// ── VIDEO CARD ────────────────────────────────────────────────────────────────
+function VideoCard({ youtubeId, title, category }: { youtubeId: string; title: string; category: string }) {
+  const [playing, setPlaying] = useState(false)
+
+  return (
+    <div className="overflow-hidden rounded-sm bg-gray-900 group">
+      <div className="relative w-full aspect-video">
+        {playing ? (
+          <iframe
+            className="absolute inset-0 w-full h-full"
+            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+            title={title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <div className="absolute inset-0 cursor-pointer" onClick={() => setPlaying(true)}>
+            <img
+              src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
+              alt={title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-[#E2B84A] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-300">
+                <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7 ml-1">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="p-4 bg-[#3D4F5C]">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#E2B84A] mb-1">{category}</p>
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+      </div>
+    </div>
+  )
+}
+
+// ── MAIN ──────────────────────────────────────────────────────────────────────
 export default function Gallery() {
-  const { t, lang } = useLang()
+  const { t } = useLang()
   const g = t.gallery
 
+  const [activeTab, setActiveTab] = useState<'photos' | 'videos'>('photos')
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0)
+  const [activeVideoCategory, setActiveVideoCategory] = useState('All')
   const [lightbox, setLightbox] = useState<string | null>(null)
 
   const activeKeyword = categoryKeys[activeCategoryIndex]
@@ -118,7 +233,11 @@ export default function Gallery() {
     ? galleryImages
     : galleryImages.filter(img => img.category === activeKeyword)
 
-  const projects = g.projects.map((p, i) => ({ ...p, ...beforeAfterImages[i] }))
+  const filteredVideos = activeVideoCategory === 'All'
+    ? galleryVideos
+    : galleryVideos.filter(v => v.category === activeVideoCategory)
+
+  const projects = g.projects.map((p: { title: string; category: string }, i: number) => ({ ...p, ...beforeAfterImages[i] }))
 
   return (
     <main>
@@ -138,7 +257,7 @@ export default function Gallery() {
           <h2 className="font-serif text-4xl font-semibold text-white">{g.transformationsTitle}</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-          {projects.map((project, index) => (
+          {projects.map((project: { before: string; after: string; title: string; category: string }, index: number) => (
             <BeforeAfterSlider
               key={index}
               before={project.before}
@@ -153,43 +272,105 @@ export default function Gallery() {
         </div>
       </section>
 
-      {/* Photo Grid */}
+      {/* Portfolio: Fotos + Videos */}
       <section className="bg-gray-50 py-16 px-6 md:px-10">
         <div className="text-center mb-10">
           <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-2">{g.portfolioBadge}</p>
           <h2 className="font-serif text-4xl font-semibold text-gray-900 mb-8">{g.portfolioTitle}</h2>
-          <div className="flex flex-wrap justify-center gap-3 mb-10">
-            {g.categories.map((cat, index) => (
+
+          {/* Pestañas Photos | Videos */}
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex rounded-sm border border-gray-200 overflow-hidden">
               <button
-                key={cat}
-                onClick={() => setActiveCategoryIndex(index)}
-                className={`px-5 py-2 text-sm font-semibold uppercase tracking-wider rounded-sm transition-colors ${
-                  activeCategoryIndex === index
+                onClick={() => setActiveTab('photos')}
+                className={`px-8 py-2.5 text-sm font-semibold uppercase tracking-wider transition-colors ${
+                  activeTab === 'photos'
                     ? 'bg-[#C9A84C] text-white'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C]'
+                    : 'bg-white text-gray-600 hover:text-[#C9A84C]'
                 }`}
               >
-                {cat}
+                {g.tabPhotos ?? 'Photos'}
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-7xl mx-auto">
-          {filtered.map((img, index) => (
-            <div
-              key={index}
-              className="relative aspect-square overflow-hidden rounded-sm cursor-pointer group"
-              onClick={() => setLightbox(img.src)}
-            >
-              <img src={img.src} alt={img.category} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[#C9A84C] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm">
-                  {g.categories[index < g.categories.length ? activeCategoryIndex : 0]}
-                </div>
-              </div>
+              <button
+                onClick={() => setActiveTab('videos')}
+                className={`px-8 py-2.5 text-sm font-semibold uppercase tracking-wider border-l border-gray-200 transition-colors ${
+                  activeTab === 'videos'
+                    ? 'bg-[#C9A84C] text-white'
+                    : 'bg-white text-gray-600 hover:text-[#C9A84C]'
+                }`}
+              >
+                {g.tabVideos ?? 'Videos'}
+              </button>
             </div>
-          ))}
+          </div>
+
+          {/* ── FOTOS ── */}
+          {activeTab === 'photos' && (
+            <>
+              <div className="flex flex-wrap justify-center gap-3 mb-10">
+                {g.categories.map((cat: string, index: number) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategoryIndex(index)}
+                    className={`px-5 py-2 text-sm font-semibold uppercase tracking-wider rounded-sm transition-colors ${
+                      activeCategoryIndex === index
+                        ? 'bg-[#C9A84C] text-white'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C]'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-7xl mx-auto">
+                {filtered.map((img, index) => (
+                  <div
+                    key={index}
+                    className="relative aspect-square overflow-hidden rounded-sm cursor-pointer group"
+                    onClick={() => setLightbox(img.src)}
+                  >
+                    <img src={img.src} alt={img.category} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[#C9A84C] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm">
+                        {img.category}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ── VIDEOS ── */}
+          {activeTab === 'videos' && (
+            <>
+              <div className="flex flex-wrap justify-center gap-3 mb-10">
+                {videoCategoryKeys.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveVideoCategory(cat)}
+                    className={`px-5 py-2 text-sm font-semibold uppercase tracking-wider rounded-sm transition-colors ${
+                      activeVideoCategory === cat
+                        ? 'bg-[#C9A84C] text-white'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:border-[#C9A84C] hover:text-[#C9A84C]'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                {filteredVideos.map((video, index) => (
+                  <VideoCard
+                    key={index}
+                    youtubeId={video.youtubeId}
+                    title={video.title}
+                    category={video.category}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </section>
 
