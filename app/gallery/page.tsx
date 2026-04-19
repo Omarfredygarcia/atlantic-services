@@ -83,13 +83,10 @@ const galleryImages = [
   { src: '/images/EXTERIOR/exterior_17.jpg',                                  category: 'Exterior' },
   { src: '/images/EXTERIOR/exterior_18.jpg',                                  category: 'Exterior' },
 
-  // ── REMODELING ──────────────────────────────────────────────────────────────
+  // ── REMODELING (sin duplicados) ──────────────────────────────────────────────
   { src: '/images/REMODELING/tempImageMtSaY6.webp',                           category: 'Remodeling' },
-  { src: '/images/REMODELING/tempImageMtSaY6 (1).webp',                       category: 'Remodeling' },
   { src: '/images/REMODELING/tempImagesDXud9.webp',                           category: 'Remodeling' },
-  { src: '/images/REMODELING/tempImagesDXud9 (1).webp',                       category: 'Remodeling' },
   { src: '/images/REMODELING/tempImagezZmvwQ.webp',                           category: 'Remodeling' },
-  { src: '/images/REMODELING/tempImagezZmvwQ (1).webp',                       category: 'Remodeling' },
 
   // ── WATERPROOFING ───────────────────────────────────────────────────────────
   { src: '/images/WATERPROOFING/IMG_3976.webp',                               category: 'Waterproofing' },
@@ -108,19 +105,18 @@ const beforeAfterImages = [
 ]
 
 // ── VIDEOS ────────────────────────────────────────────────────────────────────
-// Reemplaza cada youtubeId con el ID real después de subir a YouTube.
-// El ID es la parte final de la URL: https://youtu.be/AQUI_VA_EL_ID
+// isShort: true  → video vertical grabado con celular (aspect 9/16)
+// isShort: false → video horizontal normal (aspect 16/9)
 const galleryVideos = [
-  { youtubeId: 'p_Ojb82wFIs', category: 'Commercial', title: 'Commercial 1' },
-  { youtubeId: 'S6Ajay9I7V0', category: 'Commercial', title: 'Commercial 2' },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 1'   },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 2'   },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 3'   },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Exterior',   title: 'Exterior 4'   },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Interior',   title: 'Interior 1'   },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Interior',   title: 'Interior 2'   },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Remodeling', title: 'Remodeling 1' },
-  { youtubeId: 'REEMPLAZAR_ID', category: 'Remodeling', title: 'Remodeling 2' },
+  { youtubeId: 'Xq-s0MNspp8', category: 'Commercial', title: 'Commercial 1',  isShort: false },
+  { youtubeId: '1t4n4ov3qO4', category: 'Commercial', title: 'Commercial 2',  isShort: false },
+  { youtubeId: 'VS7qmFyzY5E', category: 'Exterior',   title: 'Exterior 1',    isShort: true  },
+  { youtubeId: 'R71PHswyFD4', category: 'Exterior',   title: 'Exterior 2',    isShort: true  },
+  { youtubeId: 'j-1in0iLLVY', category: 'Interior',   title: 'Interior 1',    isShort: true  },
+  { youtubeId: 'irtZBIm8VqA', category: 'Interior',   title: 'Interior 2',    isShort: true  },
+  { youtubeId: 'r99qxHj4hHs', category: 'Interior',   title: 'Interior 3',    isShort: true  },
+  { youtubeId: 'DKP2zRg2FFw', category: 'Remodeling', title: 'Remodeling 1',  isShort: true  },
+  { youtubeId: 'SLGiR2pVHBQ', category: 'Remodeling', title: 'Remodeling 2',  isShort: true  },
 ]
 
 const categoryKeys = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
@@ -179,38 +175,53 @@ function BeforeAfterSlider({
 }
 
 // ── VIDEO CARD ────────────────────────────────────────────────────────────────
-function VideoCard({ youtubeId, title, category }: { youtubeId: string; title: string; category: string }) {
+function VideoCard({ youtubeId, title, category, isShort }: {
+  youtubeId: string; title: string; category: string; isShort: boolean
+}) {
   const [playing, setPlaying] = useState(false)
 
   return (
-    <div className="overflow-hidden rounded-sm bg-gray-900 group">
-      <div className="relative w-full aspect-video">
-        {playing ? (
-          <iframe
-            className="absolute inset-0 w-full h-full"
-            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1`}
-            title={title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        ) : (
-          <div className="absolute inset-0 cursor-pointer" onClick={() => setPlaying(true)}>
-            <img
-              src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
-              alt={title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+    <div className="overflow-hidden rounded-sm bg-gray-900 group flex flex-col">
+      <div className={isShort ? 'flex justify-center bg-black' : ''}>
+        <div
+          className="relative overflow-hidden"
+          style={isShort
+            ? { aspectRatio: '9/16', width: '100%', maxWidth: '320px' }
+            : { aspectRatio: '16/9', width: '100%' }
+          }
+        >
+          {playing ? (
+            <iframe
+              className="absolute inset-0 w-full h-full"
+              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0&modestbranding=1`}
+              title={title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
             />
-            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-[#E2B84A] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-300">
-                <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7 ml-1">
-                  <path d="M8 5v14l11-7z"/>
-                </svg>
+          ) : (
+            <div className="absolute inset-0 cursor-pointer" onClick={() => setPlaying(true)}>
+              <img
+                src={`https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`}
+                alt={title}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <div className="w-16 h-16 rounded-full bg-[#E2B84A] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-300">
+                  <svg viewBox="0 0 24 24" fill="white" className="w-7 h-7 ml-1">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
               </div>
+              {isShort && (
+                <div className="absolute top-3 right-3 bg-black/70 text-white text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-sm">
+                  Short
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-      <div className="p-4 bg-[#3D4F5C]">
+      <div className="p-4 bg-[#3D4F5C] flex-1">
         <p className="text-xs font-semibold uppercase tracking-widest text-[#E2B84A] mb-1">{category}</p>
         <h3 className="text-sm font-semibold text-white">{title}</h3>
       </div>
@@ -366,6 +377,7 @@ export default function Gallery() {
                     youtubeId={video.youtubeId}
                     title={video.title}
                     category={video.category}
+                    isShort={video.isShort}
                   />
                 ))}
               </div>
