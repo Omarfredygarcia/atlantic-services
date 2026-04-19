@@ -112,9 +112,8 @@ const galleryVideos = [
   { youtubeId: '1t4n4ov3qO4', category: 'Commercial', title: 'Commercial 2',  isShort: false },
   { youtubeId: 'VS7qmFyzY5E', category: 'Exterior',   title: 'Exterior 1',    isShort: true  },
   { youtubeId: 'R71PHswyFD4', category: 'Exterior',   title: 'Exterior 2',    isShort: true  },
+  { youtubeId: 'r99qxHj4hHs', category: 'Exterior',   title: 'Exterior 3',    isShort: true  },  
   { youtubeId: 'j-1in0iLLVY', category: 'Interior',   title: 'Interior 1',    isShort: true  },
-  { youtubeId: 'irtZBIm8VqA', category: 'Interior',   title: 'Interior 2',    isShort: true  },
-  { youtubeId: 'r99qxHj4hHs', category: 'Interior',   title: 'Interior 3',    isShort: true  },
   { youtubeId: 'DKP2zRg2FFw', category: 'Remodeling', title: 'Remodeling 1',  isShort: true  },
   { youtubeId: 'SLGiR2pVHBQ', category: 'Remodeling', title: 'Remodeling 2',  isShort: true  },
 ]
