@@ -37,9 +37,7 @@ function PresentationVideo() {
               alt="Atlantic Services — Company Presentation"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
-            {/* Overlay degradado */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-            {/* Botón play */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-20 h-20 rounded-full bg-[#E2B84A] flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-300">
                 <svg viewBox="0 0 24 24" fill="white" className="w-9 h-9 ml-1">
@@ -47,7 +45,6 @@ function PresentationVideo() {
                 </svg>
               </div>
             </div>
-            {/* Badge inferior */}
             <div className="absolute bottom-5 left-0 right-0 text-center">
               <span className="bg-black/70 text-white text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-sm">
                 Watch Our Story
@@ -61,8 +58,14 @@ function PresentationVideo() {
 }
 
 export default function About() {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const a = t.about
+
+  const videoBadge   = lang === 'es' ? 'Véanos en acción'      : 'See us in action'
+  const videoTitle   = lang === 'es' ? 'Conozca Atlantic Services' : 'Meet Atlantic Services'
+  const videoSubtitle = lang === 'es'
+    ? 'Vea de primera mano la calidad, dedicación y profesionalismo que nos han convertido en un nombre de confianza en la construcción en Indianapolis y el Medio Oeste durante más de 30 años.'
+    : 'See firsthand the quality, dedication and professionalism that have made us a trusted name in construction across Indianapolis and the Midwest for over 30 years.'
 
   return (
     <main>
@@ -117,17 +120,10 @@ export default function About() {
       <section className="bg-black py-20 px-6 md:px-10">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-            {/* Texto izquierda */}
             <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-4">
-                {a.videoBadge ?? 'See us in action'}
-              </p>
-              <h2 className="font-serif text-4xl font-semibold text-white mb-6 leading-tight">
-                {a.videoTitle ?? 'Meet Atlantic Services'}
-              </h2>
-              <p className="text-lg text-white/60 font-light leading-relaxed mb-8">
-                {a.videoSubtitle ?? 'See firsthand the quality, dedication and professionalism that have made us a trusted name in construction across Indianapolis and the Midwest for over 30 years.'}
-              </p>
+              <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-4">{videoBadge}</p>
+              <h2 className="font-serif text-4xl font-semibold text-white mb-6 leading-tight">{videoTitle}</h2>
+              <p className="text-lg text-white/60 font-light leading-relaxed mb-8">{videoSubtitle}</p>
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-sm bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
@@ -155,7 +151,6 @@ export default function About() {
                 </div>
               </div>
             </div>
-            {/* Video derecha */}
             <PresentationVideo />
           </div>
         </div>
