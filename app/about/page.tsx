@@ -17,10 +17,10 @@ function PresentationVideo() {
   const [playing, setPlaying] = useState(false)
 
   return (
-    <div className="flex justify-center">
+    <div className="flex justify-center md:justify-end">
       <div
         className="relative overflow-hidden rounded-sm shadow-2xl"
-        style={{ aspectRatio: '9/16', width: '100%', maxWidth: '380px' }}
+        style={{ aspectRatio: '9/16', width: '100%', maxWidth: '340px' }}
       >
         {playing ? (
           <iframe
@@ -37,16 +37,19 @@ function PresentationVideo() {
               alt="Atlantic Services — Company Presentation"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+            {/* Degradado inferior */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+            {/* Botón play */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-20 h-20 rounded-full bg-[#E2B84A] flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-300">
+              <div className="w-20 h-20 rounded-full bg-[#E2B84A] flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-300 border-4 border-white/20">
                 <svg viewBox="0 0 24 24" fill="white" className="w-9 h-9 ml-1">
                   <path d="M8 5v14l11-7z"/>
                 </svg>
               </div>
             </div>
-            <div className="absolute bottom-5 left-0 right-0 text-center">
-              <span className="bg-black/70 text-white text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-sm">
+            {/* Badge */}
+            <div className="absolute bottom-5 left-0 right-0 text-center px-4">
+              <span className="bg-[#E2B84A] text-white text-xs font-bold uppercase tracking-widest px-5 py-2 rounded-sm shadow-lg">
                 Watch Our Story
               </span>
             </div>
@@ -61,25 +64,52 @@ export default function About() {
   const { t, lang } = useLang()
   const a = t.about
 
-  const videoBadge   = lang === 'es' ? 'Véanos en acción'      : 'See us in action'
-  const videoTitle   = lang === 'es' ? 'Conozca Atlantic Services' : 'Meet Atlantic Services'
-  const videoSubtitle = lang === 'es'
-    ? 'Vea de primera mano la calidad, dedicación y profesionalismo que nos han convertido en un nombre de confianza en la construcción en Indianapolis y el Medio Oeste durante más de 30 años.'
-    : 'See firsthand the quality, dedication and professionalism that have made us a trusted name in construction across Indianapolis and the Midwest for over 30 years.'
-
   return (
     <main>
       <Navbar />
 
-      {/* Hero */}
-      <section className="bg-black py-24 px-10">
-        <div className="max-w-4xl">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-4">{a.badge}</p>
-          <h1 className="font-serif text-6xl font-semibold text-white leading-tight mb-6">
-            {a.title1}<br />
-            {a.title2} <em className="text-[#C9A84C] not-italic">{a.titleHighlight}</em>
-          </h1>
-          <p className="text-xl text-white/60 font-light leading-relaxed max-w-2xl">{a.subtitle}</p>
+      {/* ── HERO con video ── */}
+      <section className="bg-black py-20 px-6 md:px-10">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          {/* Texto izquierda */}
+          <div>
+            <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-4">{a.badge}</p>
+            <h1 className="font-serif text-5xl md:text-6xl font-semibold text-white leading-tight mb-6">
+              {a.title1}<br />
+              {a.title2} <em className="text-[#C9A84C] not-italic">{a.titleHighlight}</em>
+            </h1>
+            <p className="text-lg text-white/60 font-light leading-relaxed mb-8">{a.subtitle}</p>
+            {/* Mini credenciales */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-sm bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4"/>
+                  </svg>
+                </div>
+                <p className="text-white/70 text-sm">BBB A+ Accredited · Licensed & Insured</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-sm bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4"/>
+                  </svg>
+                </div>
+                <p className="text-white/70 text-sm">30+ years · 500+ projects completed</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-sm bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4"/>
+                  </svg>
+                </div>
+                <p className="text-white/70 text-sm">Serving IN, IL, OH, MI & KY</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Video derecha */}
+          <PresentationVideo />
         </div>
       </section>
 
@@ -112,46 +142,6 @@ export default function About() {
                 <p className="text-white/50 text-sm">{a.quoteLocation}</p>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── VIDEO DE PRESENTACIÓN ── */}
-      <section className="bg-black py-20 px-6 md:px-10">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-widest text-[#C9A84C] mb-4">{videoBadge}</p>
-              <h2 className="font-serif text-4xl font-semibold text-white mb-6 leading-tight">{videoTitle}</h2>
-              <p className="text-lg text-white/60 font-light leading-relaxed mb-8">{videoSubtitle}</p>
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-sm bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4"/>
-                    </svg>
-                  </div>
-                  <p className="text-white/80 text-sm">BBB A+ Accredited · Licensed & Insured</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-sm bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4"/>
-                    </svg>
-                  </div>
-                  <p className="text-white/80 text-sm">30+ years · 500+ projects completed</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-sm bg-[#C9A84C] flex items-center justify-center flex-shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4"/>
-                    </svg>
-                  </div>
-                  <p className="text-white/80 text-sm">Serving IN, IL, OH, MI & KY</p>
-                </div>
-              </div>
-            </div>
-            <PresentationVideo />
           </div>
         </div>
       </section>
