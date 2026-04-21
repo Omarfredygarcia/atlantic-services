@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     return NextResponse.json({
       ok: false,
-      error: 'Servicio RPA no disponible. Ejecuta python main.py en el PC de oficina.',
+      error: `Servicio RPA no disponible. URL: ${RPA_URL} — ${e.message}`,
       detalle: e.message
     }, { status: 503 })
   }
