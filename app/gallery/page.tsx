@@ -98,7 +98,7 @@ const galleryImages = [
 ]
 
 const beforeAfterImages = [
-  { before: '/images/BEFORE_AFTER/comercial_before.jpg', after: '/images/BEFORE_AFTER/comercial_after.jpg' },
+  { before: '/images/BEFORE_AFTER/comercial_before_2.jpg', after: '/images/BEFORE_AFTER/comercial_after_2.jpg' },
   { before: '/images/BEFORE_AFTER/Coke_before.jpg',      after: '/images/BEFORE_AFTER/Coke_after.jpg' },
   { before: '/images/BEFORE_AFTER/Coke_before_2.jpg',    after: '/images/BEFORE_AFTER/Coke_after_2.jpg' },
   { before: '/images/BEFORE_AFTER/bath_before.jpg',      after: '/images/BEFORE_AFTER/bath_after.jpg' },
@@ -115,7 +115,6 @@ const galleryVideos = [
   { youtubeId: 'Wcmf8CT_TXI', category: 'Exterior',   title: 'Exterior 3',    isShort: true  },  
   { youtubeId: 'SfaWbBjVx-s', category: 'Interior',   title: 'Interior 1',    isShort: true  },
   { youtubeId: '3kaIsM4OAjg', category: 'Remodeling', title: 'Remodeling 1',  isShort: true  },
-  { youtubeId: '3kaIsM4OAjg', category: 'Remodeling', title: 'Remodeling 2',  isShort: true  },
 ]
 
 const categoryKeys = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
