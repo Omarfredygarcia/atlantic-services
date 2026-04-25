@@ -108,13 +108,23 @@ const beforeAfterImages = [
 // isShort: true  → video vertical grabado con celular (aspect 9/16)
 // isShort: false → video horizontal normal (aspect 16/9)
 const galleryVideos = [
-  { youtubeId: 'iCu2qpi_L34', category: 'Commercial', title: 'Commercial 1',  isShort: false },
-  { youtubeId: '8ycSKcCSWq0', category: 'Commercial', title: 'Commercial 2',  isShort: false },
-  { youtubeId: 'HzbPy-Jncd0', category: 'Exterior',   title: 'Exterior 1',    isShort: true  },
-  { youtubeId: 'nfitUDjR7uI', category: 'Exterior',   title: 'Exterior 2',    isShort: true  },
-  { youtubeId: 'Wcmf8CT_TXI', category: 'Exterior',   title: 'Exterior 3',    isShort: true  },  
-  { youtubeId: 'SfaWbBjVx-s', category: 'Interior',   title: 'Interior 1',    isShort: true  },
-  { youtubeId: '3kaIsM4OAjg', category: 'Remodeling', title: 'Remodeling 1',  isShort: true  },
+  // aqui apunta a la cuenta temporal de nicolas
+  //{ youtubeId: 'iCu2qpi_L34', category: 'Commercial', title: 'Commercial 1',  isShort: false },
+  //{ youtubeId: '8ycSKcCSWq0', category: 'Commercial', title: 'Commercial 2',  isShort: false },
+  //{ youtubeId: 'HzbPy-Jncd0', category: 'Exterior',   title: 'Exterior 1',    isShort: true  },
+  //{ youtubeId: 'nfitUDjR7uI', category: 'Exterior',   title: 'Exterior 2',    isShort: true  },
+  //{ youtubeId: 'Wcmf8CT_TXI', category: 'Exterior',   title: 'Exterior 3',    isShort: true  },  
+  //{ youtubeId: 'SfaWbBjVx-s', category: 'Interior',   title: 'Interior 1',    isShort: true  },
+  //{ youtubeId: '3kaIsM4OAjg', category: 'Remodeling', title: 'Remodeling 1',  isShort: true  },
+  // apuntar a la cuanta de youtube de atlantic despues de desbloqueo de la cuanta 
+  { youtubeId: 'Xq-s0MNspp8', category: 'Commercial', title: 'Commercial 1',  isShort: false },
+  { youtubeId: '1t4n4ov3qO4', category: 'Commercial', title: 'Commercial 2',  isShort: false },
+  { youtubeId: 'VS7qmFyzY5E', category: 'Exterior',   title: 'Exterior 1',    isShort: true  },
+  { youtubeId: 'R71PHswyFD4', category: 'Exterior',   title: 'Exterior 2',    isShort: true  },
+  { youtubeId: 'r99qxHj4hHs', category: 'Exterior',   title: 'Exterior 3',    isShort: true  },  
+  { youtubeId: 'j-1in0iLLVY', category: 'Interior',   title: 'Interior 1',    isShort: true  },
+  { youtubeId: 'SLGiR2pVHBQ', category: 'Remodeling', title: 'Remodeling 1',  isShort: true  },
+
 ]
 
 const categoryKeys = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
