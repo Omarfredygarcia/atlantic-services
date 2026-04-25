@@ -171,7 +171,12 @@ export default function DashboardPage() {
           >
             {runningRPA ? '⏳ Procesando...' : '▶ Correr RPA'}
           </button>
-
+          <button
+            onClick={() => router.push('/admin/catalogo')}
+            className="bg-[#333] hover:bg-[#444] text-white font-bold px-5 py-2 rounded-lg transition-colors"
+          >
+            📦 Catálogo
+          </button>
           {/* Filtro */}
           <select
             value={filtroEstado}
