@@ -4,44 +4,61 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 
+// ── Interfaces ─────────────────────────────────────────────────────────────────
 interface CatalogoItem {
   id: string
-  categoria: string
   material: string
-  unidad: string
   precio_base: number
-  tienda: string
   desperdicio_pct: number
   mano_obra_pct: number
+  search_query: string | null
   activo: boolean
+  categoria_id: string
+  tienda_id: string
+  unidad_id: string
+  // Nombres resueltos via JOIN
+  categoria_nombre: string
+  tienda_nombre: string
+  unidad_codigo: string
 }
 
-interface Opcion { id: string; nombre?: string; codigo?: string }
+interface CategoriaRef { id: string; nombre: string }
+interface TiendaRef    { id: string; nombre: string }
+interface UnidadRef    { id: string; codigo: string; descripcion: string }
 
-const EMPTY = {
-  categoria: '', material: '', unidad: 'ft2',
-  precio_base: 0, tienda: 'Home Depot',
-  desperdicio_pct: 0.10, mano_obra_pct: 0.35, activo: true,
+const FORM_EMPTY = {
+  categoria_id:   '',
+  tienda_id:      '',
+  unidad_id:      '',
+  material:       '',
+  precio_base:    0,
+  desperdicio_pct: 0.10,
+  mano_obra_pct:  0.35,
+  search_query:   '',
+  activo:         true,
 }
 
+// ── Página principal ───────────────────────────────────────────────────────────
 export default function CatalogoPage() {
   const router = useRouter()
-  const [items, setItems]         = useState<CatalogoItem[]>([])
-  const [tiendas, setTiendas]     = useState<Opcion[]>([])
-  const [categorias, setCategorias] = useState<Opcion[]>([])
-  const [unidades, setUnidades]   = useState<Opcion[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [saving, setSaving]       = useState(false)
-  const [msg, setMsg]             = useState('')
-  const [search, setSearch]       = useState('')
-  const [filterCat, setFilterCat] = useState('TODAS')
-  const [filterTienda, setFilterTienda] = useState('TODAS')
-  const [filterActivo, setFilterActivo] = useState('TODOS')
-  const [modal, setModal]         = useState(false)
-  const [editing, setEditing]     = useState<CatalogoItem | null>(null)
-  const [form, setForm]           = useState({ ...EMPTY })
+
+  const [items,      setItems]      = useState<CatalogoItem[]>([])
+  const [categorias, setCategorias] = useState<CategoriaRef[]>([])
+  const [tiendas,    setTiendas]    = useState<TiendaRef[]>([])
+  const [unidades,   setUnidades]   = useState<UnidadRef[]>([])
+
+  const [loading,       setLoading]       = useState(true)
+  const [saving,        setSaving]        = useState(false)
+  const [msg,           setMsg]           = useState('')
+  const [search,        setSearch]        = useState('')
+  const [filterCat,     setFilterCat]     = useState('TODAS')
+  const [filterTienda,  setFilterTienda]  = useState('TODAS')
+  const [filterActivo,  setFilterActivo]  = useState('TODOS')
+  const [modal,         setModal]         = useState(false)
+  const [editing,       setEditing]       = useState<CatalogoItem | null>(null)
+  const [form,          setForm]          = useState({ ...FORM_EMPTY })
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [usuario, setUsuario]     = useState('')
+  const [usuario,       setUsuario]       = useState('')
 
   useEffect(() => { checkAuth(); cargarTodo() }, [])
 
@@ -52,34 +69,69 @@ export default function CatalogoPage() {
     setUsuario(user.email || '')
   }
 
+  // ── Cargar todo ──────────────────────────────────────────────────────────────
   async function cargarTodo() {
     setLoading(true)
     const supabase = createClient()
+
     const [catRes, tRes, uRes, cRes] = await Promise.all([
-      supabase.from('catalogo').select('*').order('categoria').order('material'),
+      // JOIN para resolver nombres desde FKs
+      supabase.from('catalogo')
+        .select('*, categorias(nombre), tiendas(nombre), unidades(codigo, descripcion)')
+        .order('material'),
       supabase.from('tiendas').select('id, nombre').eq('activo', true).order('nombre'),
       supabase.from('unidades').select('id, codigo, descripcion').eq('activo', true).order('codigo'),
       supabase.from('categorias').select('id, nombre').eq('activo', true).order('nombre'),
     ])
-    if (catRes.data) setItems(catRes.data)
-    if (tRes.data)   setTiendas(tRes.data)
-    if (uRes.data)   setUnidades(uRes.data)
-    if (cRes.data)   setCategorias(cRes.data)
+
+    if (catRes.data) {
+      const normalized: CatalogoItem[] = catRes.data.map((item: any) => ({
+        ...item,
+        categoria_nombre: item.categorias?.nombre  || '—',
+        tienda_nombre:    item.tiendas?.nombre     || '—',
+        unidad_codigo:    item.unidades?.codigo    || '—',
+      }))
+      setItems(normalized)
+    }
+    if (tRes.data) setTiendas(tRes.data)
+    if (uRes.data) setUnidades(uRes.data)
+    if (cRes.data) setCategorias(cRes.data)
+
     setLoading(false)
   }
 
+  // ── Guardar (crear o actualizar) ─────────────────────────────────────────────
   async function guardar() {
+    if (!form.categoria_id || !form.tienda_id || !form.unidad_id || !form.material.trim()) {
+      setMsg('❌ Categoría, tienda, unidad y material son obligatorios')
+      return
+    }
     setSaving(true)
     setMsg('')
     const supabase = createClient()
+
+    const payload = {
+      categoria_id:    form.categoria_id,
+      tienda_id:       form.tienda_id,
+      unidad_id:       form.unidad_id,
+      material:        form.material.trim(),
+      precio_base:     form.precio_base,
+      desperdicio_pct: form.desperdicio_pct,
+      mano_obra_pct:   form.mano_obra_pct,
+      search_query:    form.search_query.trim() || null,
+      activo:          form.activo,
+      updated_at:      new Date().toISOString(),
+    }
+
     if (editing) {
       const { error } = await supabase.from('catalogo')
-        .update({ ...form, updated_at: new Date().toISOString() }).eq('id', editing.id)
+        .update(payload).eq('id', editing.id)
       setMsg(error ? `❌ ${error.message}` : '✅ Material actualizado')
     } else {
-      const { error } = await supabase.from('catalogo').insert([form])
-      setMsg(error ? `❌ ${error.message}` : '✅ Material agregado')
+      const { error } = await supabase.from('catalogo').insert([payload])
+      setMsg(error ? `❌ ${error.message}` : '✅ Material agregado al catálogo')
     }
+
     setSaving(false)
     cerrarModal()
     cargarTodo()
@@ -87,7 +139,9 @@ export default function CatalogoPage() {
 
   async function toggleActivo(item: CatalogoItem) {
     const supabase = createClient()
-    await supabase.from('catalogo').update({ activo: !item.activo }).eq('id', item.id)
+    await supabase.from('catalogo')
+      .update({ activo: !item.activo, updated_at: new Date().toISOString() })
+      .eq('id', item.id)
     cargarTodo()
   }
 
@@ -99,13 +153,14 @@ export default function CatalogoPage() {
     cargarTodo()
   }
 
+  // ── Modal ────────────────────────────────────────────────────────────────────
   function abrirNuevo() {
     setEditing(null)
     setForm({
-      ...EMPTY,
-      tienda: tiendas[0]?.nombre || 'Home Depot',
-      unidad: unidades[0]?.codigo || 'ft2',
-      categoria: categorias[0]?.nombre || '',
+      ...FORM_EMPTY,
+      categoria_id: categorias[0]?.id || '',
+      tienda_id:    tiendas[0]?.id    || '',
+      unidad_id:    unidades[0]?.id   || '',
     })
     setModal(true)
   }
@@ -113,25 +168,32 @@ export default function CatalogoPage() {
   function abrirEditar(item: CatalogoItem) {
     setEditing(item)
     setForm({
-      categoria: item.categoria, material: item.material,
-      unidad: item.unidad, precio_base: item.precio_base,
-      tienda: item.tienda, desperdicio_pct: item.desperdicio_pct,
-      mano_obra_pct: item.mano_obra_pct, activo: item.activo,
+      categoria_id:    item.categoria_id,
+      tienda_id:       item.tienda_id,
+      unidad_id:       item.unidad_id,
+      material:        item.material,
+      precio_base:     item.precio_base,
+      desperdicio_pct: item.desperdicio_pct,
+      mano_obra_pct:   item.mano_obra_pct,
+      search_query:    item.search_query || '',
+      activo:          item.activo,
     })
     setModal(true)
   }
 
   function cerrarModal() { setModal(false); setEditing(null) }
 
-  const catsFiltro = ['TODAS', ...Array.from(new Set(items.map(i => i.categoria))).sort()]
-  const tiendasFiltro = ['TODAS', ...tiendas.map(t => t.nombre || '')]
+  // ── Filtros ──────────────────────────────────────────────────────────────────
+  const catsFiltro    = ['TODAS', ...categorias.map(c => c.nombre)]
+  const tiendasFiltro = ['TODAS', ...tiendas.map(t => t.nombre)]
 
   const filtered = items.filter(i => {
     const matchSearch = search === '' ||
       i.material.toLowerCase().includes(search.toLowerCase()) ||
-      i.categoria.toLowerCase().includes(search.toLowerCase())
-    const matchCat    = filterCat === 'TODAS' || i.categoria === filterCat
-    const matchTienda = filterTienda === 'TODAS' || i.tienda === filterTienda
+      i.categoria_nombre.toLowerCase().includes(search.toLowerCase()) ||
+      (i.search_query || '').toLowerCase().includes(search.toLowerCase())
+    const matchCat    = filterCat    === 'TODAS' || i.categoria_nombre === filterCat
+    const matchTienda = filterTienda === 'TODAS' || i.tienda_nombre    === filterTienda
     const matchActivo = filterActivo === 'TODOS' ||
       (filterActivo === 'ACTIVO' ? i.activo : !i.activo)
     return matchSearch && matchCat && matchTienda && matchActivo
@@ -140,11 +202,14 @@ export default function CatalogoPage() {
   const stats = {
     total:   items.length,
     activos: items.filter(i => i.activo).length,
-    cats:    new Set(items.map(i => i.categoria)).size,
+    cats:    new Set(items.map(i => i.categoria_nombre)).size,
+    sinQuery: items.filter(i => !i.search_query).length,
   }
 
+  // ── UI ────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#141414]">
+
       {/* Navbar */}
       <nav className="bg-[#1C1C1C] border-b border-[#333] px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -165,12 +230,14 @@ export default function CatalogoPage() {
       </nav>
 
       <div className="p-6">
+
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Total materiales', value: stats.total,   color: 'text-white' },
-            { label: 'Activos',          value: stats.activos, color: 'text-green-400' },
-            { label: 'Categorías',       value: stats.cats,    color: 'text-[#C9A84C]' },
+            { label: 'Total materiales', value: stats.total,    color: 'text-white' },
+            { label: 'Activos',          value: stats.activos,  color: 'text-green-400' },
+            { label: 'Categorías',       value: stats.cats,     color: 'text-[#C9A84C]' },
+            { label: 'Sin search_query', value: stats.sinQuery, color: stats.sinQuery > 0 ? 'text-yellow-400' : 'text-green-400' },
           ].map(s => (
             <div key={s.label} className="bg-[#1C1C1C] rounded-xl p-4 border border-[#333]">
               <p className="text-gray-400 text-sm">{s.label}</p>
@@ -181,9 +248,18 @@ export default function CatalogoPage() {
 
         {msg && (
           <div className={`mb-4 px-4 py-2 rounded-lg text-sm font-medium ${
-            msg.startsWith('✅') ? 'bg-green-900/30 text-green-400 border border-green-700'
-                                 : 'bg-red-900/30 text-red-400 border border-red-700'
+            msg.startsWith('✅')
+              ? 'bg-green-900/30 text-green-400 border border-green-700'
+              : 'bg-red-900/30 text-red-400 border border-red-700'
           }`}>{msg}</div>
+        )}
+
+        {/* Alerta si hay materiales sin search_query */}
+        {stats.sinQuery > 0 && (
+          <div className="mb-4 px-4 py-2 rounded-lg text-sm bg-yellow-900/30 text-yellow-400 border border-yellow-700">
+            ⚠️ <strong>{stats.sinQuery} material(es)</strong> sin search_query — el RPA usará el nombre del material como búsqueda.
+            Edítalos para mejorar la precisión del scraper.
+          </div>
         )}
 
         {/* Acciones y filtros */}
@@ -196,9 +272,9 @@ export default function CatalogoPage() {
             className="bg-[#333] hover:bg-[#444] text-white font-bold px-4 py-2 rounded-lg transition-colors">
             ↻ Actualizar
           </button>
-          <input type="text" placeholder="Buscar material o categoría..."
+          <input type="text" placeholder="Buscar material, categoría o search query..."
             value={search} onChange={e => setSearch(e.target.value)}
-            className="bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-2 text-sm w-56" />
+            className="bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-2 text-sm w-72" />
           <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
             className="bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
             {catsFiltro.map(c => <option key={c}>{c}</option>)}
@@ -217,30 +293,46 @@ export default function CatalogoPage() {
         </div>
 
         {/* Tabla */}
-        <div className="bg-[#1C1C1C] rounded-xl border border-[#333] overflow-hidden">
+        <div className="bg-[#1C1C1C] rounded-xl border border-[#333] overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-[#C9A84C]">
-                {['Categoría','Material','Unidad','Tienda','Precio Base','Desperdicio','Mano Obra','Estado','Acciones'].map(h => (
-                  <th key={h} className="text-black font-bold text-xs px-3 py-3 text-left">{h}</th>
+                {['Categoría','Material','Search Query','Unidad','Tienda','Precio Base','Desperd.','M. Obra','Estado','Acciones'].map(h => (
+                  <th key={h} className="text-black font-bold text-xs px-3 py-3 text-left whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="text-center text-gray-400 py-12">Cargando catálogo...</td></tr>
+                <tr><td colSpan={10} className="text-center text-gray-400 py-12">Cargando catálogo...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="text-center text-gray-400 py-12">No hay materiales</td></tr>
+                <tr><td colSpan={10} className="text-center text-gray-400 py-12">No hay materiales</td></tr>
               ) : filtered.map((item, i) => (
                 <tr key={item.id}
                   className={`border-t border-[#333] hover:bg-[#252525] transition-colors ${i%2===0?'':'bg-[#1A1A1A]'}`}>
-                  <td className="px-3 py-3 text-[#C9A84C] text-xs font-semibold">{item.categoria}</td>
+                  <td className="px-3 py-3 text-[#C9A84C] text-xs font-semibold whitespace-nowrap">
+                    {item.categoria_nombre}
+                  </td>
                   <td className="px-3 py-3 text-white text-sm">{item.material}</td>
-                  <td className="px-3 py-3 text-gray-300 text-xs font-mono">{item.unidad}</td>
-                  <td className="px-3 py-3 text-gray-300 text-xs">{item.tienda}</td>
-                  <td className="px-3 py-3 text-green-400 text-sm font-mono">${Number(item.precio_base).toFixed(2)}</td>
-                  <td className="px-3 py-3 text-gray-300 text-xs">{(item.desperdicio_pct * 100).toFixed(0)}%</td>
-                  <td className="px-3 py-3 text-gray-300 text-xs">{(item.mano_obra_pct * 100).toFixed(0)}%</td>
+                  <td className="px-3 py-3 max-w-[200px]">
+                    {item.search_query
+                      ? <span className="text-blue-400 text-xs font-mono">{item.search_query}</span>
+                      : <span className="text-gray-600 text-xs italic">— sin definir</span>
+                    }
+                  </td>
+                  <td className="px-3 py-3 text-gray-300 text-xs font-mono whitespace-nowrap">
+                    {item.unidad_codigo}
+                  </td>
+                  <td className="px-3 py-3 text-gray-300 text-xs whitespace-nowrap">{item.tienda_nombre}</td>
+                  <td className="px-3 py-3 text-green-400 text-sm font-mono whitespace-nowrap">
+                    ${Number(item.precio_base).toFixed(2)}
+                  </td>
+                  <td className="px-3 py-3 text-gray-300 text-xs text-center">
+                    {(item.desperdicio_pct * 100).toFixed(0)}%
+                  </td>
+                  <td className="px-3 py-3 text-gray-300 text-xs text-center">
+                    {(item.mano_obra_pct * 100).toFixed(0)}%
+                  </td>
                   <td className="px-3 py-3">
                     <button onClick={() => toggleActivo(item)}
                       className={`text-xs font-bold px-2 py-1 rounded-full transition-colors ${
@@ -270,38 +362,46 @@ export default function CatalogoPage() {
         </div>
       </div>
 
-      {/* Modal Nuevo/Editar */}
+      {/* ── Modal Nuevo / Editar ───────────────────────────────────────────────── */}
       {modal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={cerrarModal}>
-          <div className="bg-[#1C1C1C] border border-[#333] rounded-xl p-6 w-full max-w-lg"
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={cerrarModal}>
+          <div className="bg-[#1C1C1C] border border-[#333] rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
+
             <h2 className="text-white font-bold text-lg mb-5">
               {editing ? '✏️ Editar Material' : '+ Nuevo Material'}
             </h2>
+
             <div className="grid grid-cols-2 gap-4">
+
+              {/* Categoría */}
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Categoría *</label>
-                <select value={form.categoria}
-                  onChange={e => setForm({ ...form, categoria: e.target.value })}
+                <select value={form.categoria_id}
+                  onChange={e => setForm({ ...form, categoria_id: e.target.value })}
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
                   <option value="">Seleccionar...</option>
                   {categorias.map(c => (
-                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
                   ))}
                 </select>
               </div>
 
+              {/* Tienda */}
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Tienda *</label>
-                <select value={form.tienda}
-                  onChange={e => setForm({ ...form, tienda: e.target.value })}
+                <select value={form.tienda_id}
+                  onChange={e => setForm({ ...form, tienda_id: e.target.value })}
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
+                  <option value="">Seleccionar...</option>
                   {tiendas.map(t => (
-                    <option key={t.id} value={t.nombre}>{t.nombre}</option>
+                    <option key={t.id} value={t.id}>{t.nombre}</option>
                   ))}
                 </select>
               </div>
 
+              {/* Material */}
               <div className="col-span-2">
                 <label className="text-gray-400 text-xs mb-1 block">Material *</label>
                 <input value={form.material}
@@ -310,17 +410,34 @@ export default function CatalogoPage() {
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
+              {/* Search Query — campo clave para el scraper */}
+              <div className="col-span-2">
+                <label className="text-gray-400 text-xs mb-1 block">
+                  Search Query
+                  <span className="text-gray-600 ml-2 font-normal">
+                    (texto exacto para buscar en tienda — vacío usa el nombre del material)
+                  </span>
+                </label>
+                <input value={form.search_query}
+                  onChange={e => setForm({ ...form, search_query: e.target.value })}
+                  placeholder="Ej: luxury vinyl plank flooring waterproof 6x36"
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
+              </div>
+
+              {/* Unidad */}
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Unidad *</label>
-                <select value={form.unidad}
-                  onChange={e => setForm({ ...form, unidad: e.target.value })}
+                <select value={form.unidad_id}
+                  onChange={e => setForm({ ...form, unidad_id: e.target.value })}
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
+                  <option value="">Seleccionar...</option>
                   {unidades.map(u => (
-                    <option key={u.id} value={u.codigo}>{u.codigo} — {(u as any).descripcion}</option>
+                    <option key={u.id} value={u.id}>{u.codigo} — {u.descripcion}</option>
                   ))}
                 </select>
               </div>
 
+              {/* Precio Base */}
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Precio Base (USD)</label>
                 <input type="number" step="0.01" min="0"
@@ -329,6 +446,7 @@ export default function CatalogoPage() {
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
+              {/* Desperdicio */}
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Desperdicio %</label>
                 <input type="number" step="1" min="0" max="100"
@@ -337,6 +455,7 @@ export default function CatalogoPage() {
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
+              {/* Mano de obra */}
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Mano de Obra %</label>
                 <input type="number" step="1" min="0" max="100"
@@ -345,6 +464,7 @@ export default function CatalogoPage() {
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
+              {/* Toggle Activo */}
               <div className="flex items-center gap-3">
                 <label className="text-gray-400 text-xs">Activo</label>
                 <button onClick={() => setForm({ ...form, activo: !form.activo })}
@@ -355,7 +475,8 @@ export default function CatalogoPage() {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <button onClick={guardar} disabled={saving || !form.categoria || !form.material}
+              <button onClick={guardar}
+                disabled={saving || !form.categoria_id || !form.tienda_id || !form.unidad_id || !form.material.trim()}
                 className="flex-1 bg-[#C9A84C] hover:bg-[#C97B10] disabled:bg-gray-600 text-black font-bold py-2 rounded-lg transition-colors">
                 {saving ? 'Guardando...' : editing ? 'Actualizar' : 'Agregar'}
               </button>
@@ -368,7 +489,7 @@ export default function CatalogoPage() {
         </div>
       )}
 
-      {/* Confirmación eliminar */}
+      {/* ── Confirmación eliminar ──────────────────────────────────────────────── */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
           <div className="bg-[#1C1C1C] border border-red-700 rounded-xl p-6 w-full max-w-sm">
