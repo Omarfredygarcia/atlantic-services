@@ -28,10 +28,10 @@ export interface Material {
   id: string
   proyecto_id: string
   linea: number
-  categoria: string
+  categoria: string        // texto — foto del momento de cotización
   material: string
   area_ft2: number
-  unidad: string
+  unidad: string           // texto — viene del catálogo al crear
   tienda_preferida?: string
   precio_unitario?: number
   desperdicio_pct?: number
@@ -43,15 +43,45 @@ export interface Material {
   created_at: string
 }
 
+// ── Tablas de referencia (modelo relacional) ──────────────────────────────────
+export interface CategoriaRef {
+  id: string
+  nombre: string
+  activo?: boolean
+}
+
+export interface TiendaRef {
+  id: string
+  nombre: string
+  activo?: boolean
+}
+
+export interface UnidadRef {
+  id: string
+  nombre: string
+  activo?: boolean
+}
+
+// ── CatalogoItem — refleja el modelo relacional actual ────────────────────────
 export interface CatalogoItem {
   id: string
-  categoria: string
   material: string
-  unidad: string
   precio_base: number
-  tienda: string
   desperdicio_pct: number
   mano_obra_pct: number
+  search_query?: string
+  activo?: boolean
+  // Relaciones (vienen del JOIN en Supabase)
+  categoria_id: string
+  tienda_id: string
+  unidad_id: string
+  categorias?: { nombre: string }
+  tiendas?:   { nombre: string }
+  unidades?:  { nombre: string }
+  // Nombres planos para uso fácil en UI (derivados del JOIN)
+  categoria_nombre?: string
+  tienda_nombre?: string
+  unidad_nombre?: string
 }
 
 export interface Usuario {
@@ -62,12 +92,9 @@ export interface Usuario {
   activo: boolean
 }
 
-export const CATEGORIAS = [
-  'Flooring', 'Drywall', 'Paint', 'Siding',
-  'Carpentry', 'Waterproof', 'Remodeling', 'Other'
-]
-
-export const TIENDAS = ['Home Depot', "Lowe's", 'Menards', 'Floor & Decor', 'ABC Supply']
+// ── Constantes de UI — solo las que no vienen de BD ──────────────────────────
+// CATEGORIAS y TIENDAS se eliminaron — ahora se leen desde Supabase
+// Mantener TIPOS_PROYECTO porque no tiene tabla propia aún
 
 export const TIPOS_PROYECTO = [
   'Flooring', 'Drywall', 'Paint', 'Siding', 'Carpentry',
