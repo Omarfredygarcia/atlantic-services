@@ -47,58 +47,49 @@ function ModalRentabilidad({
     cargarStats()
   }, [])
 
-  async function cargarStats() {
-    setLoadingStats(true)
-    try {
-      const supabase = createClient()
-      const { data: materiales } = await supabase
-        .from('materiales')
-        .select('proyecto_id, categoria, costo_material, costo_mano_obra')
+// DESPUÉS — reemplazar con esto:
+async function cargarStats() {
+  setLoadingStats(true)
+  try {
+    const res = await fetch('/api/reportes/stats')  // ← llama a tu servidor
+    const { mats, logs, projs } = await res.json()
 
-      const { data: logPrecios } = await supabase
-        .from('log_precios')
-        .select('tienda, es_precio_elegido')
+    const totalMateriales = mats.reduce((s: number, m: MaterialRow) => s + (m.costo_material || 0), 0)
+    const totalManoObra   = mats.reduce((s: number, m: MaterialRow) => s + (m.costo_mano_obra || 0), 0)
 
-      const mats: MaterialRow[] = materiales || []
-      const logs = logPrecios || []
+    const porCategoria: Record<string, number> = {}
+    mats.forEach((m: MaterialRow) => {
+      const cat = m.categoria || 'Sin categoría'
+      porCategoria[cat] = (porCategoria[cat] || 0) + (m.costo_material || 0)
+    })
 
-      const totalMateriales = mats.reduce((s, m) => s + (m.costo_material || 0), 0)
-      const totalManoObra = mats.reduce((s, m) => s + (m.costo_mano_obra || 0), 0)
+    const porTienda: Record<string, number> = {}
+    logs.filter((l: {tienda: string, es_precio_elegido: boolean}) => l.es_precio_elegido)
+        .forEach((l: {tienda: string}) => {
+          const t = l.tienda || 'Desconocida'
+          porTienda[t] = (porTienda[t] || 0) + 1
+        })
 
-      // Por categoría
-      const porCategoria: Record<string, number> = {}
-      mats.forEach(m => {
-        const cat = m.categoria || 'Sin categoría'
-        porCategoria[cat] = (porCategoria[cat] || 0) + (m.costo_material || 0)
-      })
+    const cotizados = projs.filter((p: {estado: string}) => p.estado === 'COTIZADO').length
+    const enviados  = projs.filter((p: {estado: string}) => p.estado === 'ENVIADO').length
 
-      // Por tienda (elegida)
-      const porTienda: Record<string, number> = {}
-      logs.filter(l => l.es_precio_elegido).forEach(l => {
-        const t = l.tienda || 'Desconocida'
-        porTienda[t] = (porTienda[t] || 0) + 1
-      })
-
-      const cotizados = proyectos.filter(p => p.estado === 'COTIZADO').length
-      const enviados = proyectos.filter(p => p.estado === 'ENVIADO').length
-
-      setStats({
-        totalProyectos: proyectos.length,
-        cotizados,
-        enviados,
-        totalMateriales,
-        totalManoObra,
-        totalValor: totalMateriales + totalManoObra,
-        avgPorProyecto: proyectos.length ? (totalMateriales + totalManoObra) / proyectos.length : 0,
-        busquedasSerpApi: mats.length * 3,
-        porCategoria,
-        porTienda,
-      })
-    } catch (e) {
-      console.error(e)
-    }
-    setLoadingStats(false)
+    setStats({
+      totalProyectos:   proyectos.length,
+      cotizados,
+      enviados,
+      totalMateriales,
+      totalManoObra,
+      totalValor:       totalMateriales + totalManoObra,
+      avgPorProyecto:   proyectos.length ? (totalMateriales + totalManoObra) / proyectos.length : 0,
+      busquedasSerpApi: mats.length * 3,
+      porCategoria,
+      porTienda,
+    })
+  } catch (e) {
+    console.error(e)
   }
+  setLoadingStats(false)
+}
 
   async function enviarReporte() {
     if (!emailDestino) return
