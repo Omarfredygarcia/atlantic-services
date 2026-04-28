@@ -162,7 +162,7 @@ export default function ProyectoFormPage() {
     // Catálogo con JOIN para obtener nombres de categoría, tienda y unidad
     const { data: catData } = await supabase
       .from('catalogo')
-      .select('*, categorias(nombre), tiendas(nombre), unidades(nombre)')
+      .select('*, categorias(nombre), tiendas(nombre), unidades(codigo, descripcion)')
       .eq('activo', true)
       .order('material')
 
@@ -171,7 +171,7 @@ export default function ProyectoFormPage() {
         ...item,
         categoria_nombre: item.categorias?.nombre || '',
         tienda_nombre:    item.tiendas?.nombre    || '',
-        unidad_nombre:    item.unidades?.nombre   || '',
+        unidad_nombre: item.unidades?.codigo      || '',
       }))
       setCatalogo(itemsNormalizados)
     }
