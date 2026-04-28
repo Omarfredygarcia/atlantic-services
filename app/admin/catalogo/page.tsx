@@ -14,14 +14,11 @@ interface CatalogoItem {
   desperdicio_pct: number
   mano_obra_pct: number
   activo: boolean
-  created_at?: string
-  updated_at?: string
 }
 
-const UNIDADES = ['ft2', 'sheet', 'gallon', 'lin ft', 'tube']
-const TIENDAS  = ['Home Depot', "Lowe's", 'Menards', 'Floor & Decor']
+interface Opcion { id: string; nombre?: string; codigo?: string }
 
-const EMPTY: Omit<CatalogoItem, 'id' | 'created_at' | 'updated_at'> = {
+const EMPTY = {
   categoria: '', material: '', unidad: 'ft2',
   precio_base: 0, tienda: 'Home Depot',
   desperdicio_pct: 0.10, mano_obra_pct: 0.35, activo: true,
@@ -29,21 +26,24 @@ const EMPTY: Omit<CatalogoItem, 'id' | 'created_at' | 'updated_at'> = {
 
 export default function CatalogoPage() {
   const router = useRouter()
-  const [items, setItems]       = useState<CatalogoItem[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [saving, setSaving]     = useState(false)
-  const [msg, setMsg]           = useState('')
-  const [search, setSearch]     = useState('')
+  const [items, setItems]         = useState<CatalogoItem[]>([])
+  const [tiendas, setTiendas]     = useState<Opcion[]>([])
+  const [categorias, setCategorias] = useState<Opcion[]>([])
+  const [unidades, setUnidades]   = useState<Opcion[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [saving, setSaving]       = useState(false)
+  const [msg, setMsg]             = useState('')
+  const [search, setSearch]       = useState('')
   const [filterCat, setFilterCat] = useState('TODAS')
   const [filterTienda, setFilterTienda] = useState('TODAS')
   const [filterActivo, setFilterActivo] = useState('TODOS')
-  const [modal, setModal]       = useState(false)
-  const [editing, setEditing]   = useState<CatalogoItem | null>(null)
-  const [form, setForm]         = useState({ ...EMPTY })
-  const [usuario, setUsuario]   = useState('')
+  const [modal, setModal]         = useState(false)
+  const [editing, setEditing]     = useState<CatalogoItem | null>(null)
+  const [form, setForm]           = useState({ ...EMPTY })
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [usuario, setUsuario]     = useState('')
 
-  useEffect(() => { checkAuth(); cargar() }, [])
+  useEffect(() => { checkAuth(); cargarTodo() }, [])
 
   async function checkAuth() {
     const supabase = createClient()
@@ -52,12 +52,19 @@ export default function CatalogoPage() {
     setUsuario(user.email || '')
   }
 
-  async function cargar() {
+  async function cargarTodo() {
     setLoading(true)
     const supabase = createClient()
-    const { data, error } = await supabase
-      .from('catalogo').select('*').order('categoria').order('material')
-    if (!error && data) setItems(data)
+    const [catRes, tRes, uRes, cRes] = await Promise.all([
+      supabase.from('catalogo').select('*').order('categoria').order('material'),
+      supabase.from('tiendas').select('id, nombre').eq('activo', true).order('nombre'),
+      supabase.from('unidades').select('id, codigo, descripcion').eq('activo', true).order('codigo'),
+      supabase.from('categorias').select('id, nombre').eq('activo', true).order('nombre'),
+    ])
+    if (catRes.data) setItems(catRes.data)
+    if (tRes.data)   setTiendas(tRes.data)
+    if (uRes.data)   setUnidades(uRes.data)
+    if (cRes.data)   setCategorias(cRes.data)
     setLoading(false)
   }
 
@@ -67,8 +74,7 @@ export default function CatalogoPage() {
     const supabase = createClient()
     if (editing) {
       const { error } = await supabase.from('catalogo')
-        .update({ ...form, updated_at: new Date().toISOString() })
-        .eq('id', editing.id)
+        .update({ ...form, updated_at: new Date().toISOString() }).eq('id', editing.id)
       setMsg(error ? `❌ ${error.message}` : '✅ Material actualizado')
     } else {
       const { error } = await supabase.from('catalogo').insert([form])
@@ -76,13 +82,13 @@ export default function CatalogoPage() {
     }
     setSaving(false)
     cerrarModal()
-    cargar()
+    cargarTodo()
   }
 
   async function toggleActivo(item: CatalogoItem) {
     const supabase = createClient()
     await supabase.from('catalogo').update({ activo: !item.activo }).eq('id', item.id)
-    cargar()
+    cargarTodo()
   }
 
   async function eliminar(id: string) {
@@ -90,12 +96,17 @@ export default function CatalogoPage() {
     await supabase.from('catalogo').delete().eq('id', id)
     setDeleteConfirm(null)
     setMsg('✅ Material eliminado')
-    cargar()
+    cargarTodo()
   }
 
   function abrirNuevo() {
     setEditing(null)
-    setForm({ ...EMPTY })
+    setForm({
+      ...EMPTY,
+      tienda: tiendas[0]?.nombre || 'Home Depot',
+      unidad: unidades[0]?.codigo || 'ft2',
+      categoria: categorias[0]?.nombre || '',
+    })
     setModal(true)
   }
 
@@ -112,10 +123,9 @@ export default function CatalogoPage() {
 
   function cerrarModal() { setModal(false); setEditing(null) }
 
-  // Categorías únicas para filtro
-  const categorias = ['TODAS', ...Array.from(new Set(items.map(i => i.categoria))).sort()]
+  const catsFiltro = ['TODAS', ...Array.from(new Set(items.map(i => i.categoria))).sort()]
+  const tiendasFiltro = ['TODAS', ...tiendas.map(t => t.nombre || '')]
 
-  // Filtrado
   const filtered = items.filter(i => {
     const matchSearch = search === '' ||
       i.material.toLowerCase().includes(search.toLowerCase()) ||
@@ -142,10 +152,14 @@ export default function CatalogoPage() {
           <span className="text-white font-bold text-sm">ATLANTIC SERVICES — Catálogo</span>
         </div>
         <div className="flex items-center gap-4">
+          <button onClick={() => router.push('/admin/catalogo/tiendas')}
+            className="text-gray-400 hover:text-[#C9A84C] text-xs transition-colors">🏪 Tiendas</button>
+          <button onClick={() => router.push('/admin/catalogo/categorias')}
+            className="text-gray-400 hover:text-[#C9A84C] text-xs transition-colors">📂 Categorías</button>
+          <button onClick={() => router.push('/admin/catalogo/unidades')}
+            className="text-gray-400 hover:text-[#C9A84C] text-xs transition-colors">📐 Unidades</button>
           <button onClick={() => router.push('/admin/dashboard')}
-            className="text-gray-400 hover:text-white text-sm transition-colors">
-            ← Dashboard
-          </button>
+            className="text-gray-400 hover:text-white text-sm transition-colors">← Dashboard</button>
           <span className="text-gray-400 text-sm">👤 {usuario}</span>
         </div>
       </nav>
@@ -165,14 +179,11 @@ export default function CatalogoPage() {
           ))}
         </div>
 
-        {/* Mensaje */}
         {msg && (
           <div className={`mb-4 px-4 py-2 rounded-lg text-sm font-medium ${
             msg.startsWith('✅') ? 'bg-green-900/30 text-green-400 border border-green-700'
                                  : 'bg-red-900/30 text-red-400 border border-red-700'
-          }`}>
-            {msg}
-          </div>
+          }`}>{msg}</div>
         )}
 
         {/* Acciones y filtros */}
@@ -181,35 +192,27 @@ export default function CatalogoPage() {
             className="bg-[#C9A84C] hover:bg-[#C97B10] text-black font-bold px-5 py-2 rounded-lg transition-colors">
             + Nuevo Material
           </button>
-          <button onClick={cargar}
+          <button onClick={cargarTodo}
             className="bg-[#333] hover:bg-[#444] text-white font-bold px-4 py-2 rounded-lg transition-colors">
             ↻ Actualizar
           </button>
-
-          <input
-            type="text" placeholder="Buscar material o categoría..."
+          <input type="text" placeholder="Buscar material o categoría..."
             value={search} onChange={e => setSearch(e.target.value)}
-            className="bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-2 text-sm w-56"
-          />
-
+            className="bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-2 text-sm w-56" />
           <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
             className="bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
-            {categorias.map(c => <option key={c}>{c}</option>)}
+            {catsFiltro.map(c => <option key={c}>{c}</option>)}
           </select>
-
           <select value={filterTienda} onChange={e => setFilterTienda(e.target.value)}
             className="bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
-            <option value="TODAS">Todas las tiendas</option>
-            {TIENDAS.map(t => <option key={t}>{t}</option>)}
+            {tiendasFiltro.map(t => <option key={t}>{t}</option>)}
           </select>
-
           <select value={filterActivo} onChange={e => setFilterActivo(e.target.value)}
             className="bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
             <option value="TODOS">Todos</option>
             <option value="ACTIVO">Activos</option>
             <option value="INACTIVO">Inactivos</option>
           </select>
-
           <span className="text-gray-500 text-sm ml-auto">{filtered.length} registros</span>
         </div>
 
@@ -233,7 +236,7 @@ export default function CatalogoPage() {
                   className={`border-t border-[#333] hover:bg-[#252525] transition-colors ${i%2===0?'':'bg-[#1A1A1A]'}`}>
                   <td className="px-3 py-3 text-[#C9A84C] text-xs font-semibold">{item.categoria}</td>
                   <td className="px-3 py-3 text-white text-sm">{item.material}</td>
-                  <td className="px-3 py-3 text-gray-300 text-xs">{item.unidad}</td>
+                  <td className="px-3 py-3 text-gray-300 text-xs font-mono">{item.unidad}</td>
                   <td className="px-3 py-3 text-gray-300 text-xs">{item.tienda}</td>
                   <td className="px-3 py-3 text-green-400 text-sm font-mono">${Number(item.precio_base).toFixed(2)}</td>
                   <td className="px-3 py-3 text-gray-300 text-xs">{(item.desperdicio_pct * 100).toFixed(0)}%</td>
@@ -252,7 +255,7 @@ export default function CatalogoPage() {
                     <div className="flex gap-2">
                       <button onClick={() => abrirEditar(item)}
                         className="bg-[#333] hover:bg-[#C9A84C] hover:text-black text-white text-xs px-3 py-1 rounded transition-colors">
-                        ✏️ Editar
+                        ✏️
                       </button>
                       <button onClick={() => setDeleteConfirm(item.id)}
                         className="bg-red-900/40 hover:bg-red-700 text-red-400 hover:text-white text-xs px-3 py-1 rounded transition-colors">
@@ -269,48 +272,52 @@ export default function CatalogoPage() {
 
       {/* Modal Nuevo/Editar */}
       {modal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={cerrarModal}>
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={cerrarModal}>
           <div className="bg-[#1C1C1C] border border-[#333] rounded-xl p-6 w-full max-w-lg"
             onClick={e => e.stopPropagation()}>
             <h2 className="text-white font-bold text-lg mb-5">
               {editing ? '✏️ Editar Material' : '+ Nuevo Material'}
             </h2>
-
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="text-gray-400 text-xs mb-1 block">Categoría</label>
-                <input value={form.categoria}
-                  onChange={e => setForm({ ...form, categoria: e.target.value })}
-                  placeholder="Ej: Flooring, Painting, Waterproofing..."
-                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label className="text-gray-400 text-xs mb-1 block">Material</label>
-                <input value={form.material}
-                  onChange={e => setForm({ ...form, material: e.target.value })}
-                  placeholder="Ej: Luxury Vinyl Plank, Interior Paint..."
-                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-
               <div>
-                <label className="text-gray-400 text-xs mb-1 block">Unidad</label>
-                <select value={form.unidad}
-                  onChange={e => setForm({ ...form, unidad: e.target.value })}
+                <label className="text-gray-400 text-xs mb-1 block">Categoría *</label>
+                <select value={form.categoria}
+                  onChange={e => setForm({ ...form, categoria: e.target.value })}
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
-                  {UNIDADES.map(u => <option key={u}>{u}</option>)}
+                  <option value="">Seleccionar...</option>
+                  {categorias.map(c => (
+                    <option key={c.id} value={c.nombre}>{c.nombre}</option>
+                  ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-gray-400 text-xs mb-1 block">Tienda</label>
+                <label className="text-gray-400 text-xs mb-1 block">Tienda *</label>
                 <select value={form.tienda}
                   onChange={e => setForm({ ...form, tienda: e.target.value })}
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
-                  {TIENDAS.map(t => <option key={t}>{t}</option>)}
+                  {tiendas.map(t => (
+                    <option key={t.id} value={t.nombre}>{t.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2">
+                <label className="text-gray-400 text-xs mb-1 block">Material *</label>
+                <input value={form.material}
+                  onChange={e => setForm({ ...form, material: e.target.value })}
+                  placeholder="Ej: Luxury Vinyl Plank, Interior Paint..."
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
+              </div>
+
+              <div>
+                <label className="text-gray-400 text-xs mb-1 block">Unidad *</label>
+                <select value={form.unidad}
+                  onChange={e => setForm({ ...form, unidad: e.target.value })}
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
+                  {unidades.map(u => (
+                    <option key={u.id} value={u.codigo}>{u.codigo} — {(u as any).descripcion}</option>
+                  ))}
                 </select>
               </div>
 
@@ -319,8 +326,7 @@ export default function CatalogoPage() {
                 <input type="number" step="0.01" min="0"
                   value={form.precio_base}
                   onChange={e => setForm({ ...form, precio_base: parseFloat(e.target.value) || 0 })}
-                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm"
-                />
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
               <div>
@@ -328,8 +334,7 @@ export default function CatalogoPage() {
                 <input type="number" step="1" min="0" max="100"
                   value={Math.round(form.desperdicio_pct * 100)}
                   onChange={e => setForm({ ...form, desperdicio_pct: (parseFloat(e.target.value) || 0) / 100 })}
-                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm"
-                />
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
               <div>
@@ -337,8 +342,7 @@ export default function CatalogoPage() {
                 <input type="number" step="1" min="0" max="100"
                   value={Math.round(form.mano_obra_pct * 100)}
                   onChange={e => setForm({ ...form, mano_obra_pct: (parseFloat(e.target.value) || 0) / 100 })}
-                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm"
-                />
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
               <div className="flex items-center gap-3">
@@ -372,11 +376,11 @@ export default function CatalogoPage() {
             <p className="text-gray-400 text-sm mb-5">Esta acción no se puede deshacer.</p>
             <div className="flex gap-3">
               <button onClick={() => eliminar(deleteConfirm)}
-                className="flex-1 bg-red-700 hover:bg-red-600 text-white font-bold py-2 rounded-lg transition-colors">
+                className="flex-1 bg-red-700 hover:bg-red-600 text-white font-bold py-2 rounded-lg">
                 Eliminar
               </button>
               <button onClick={() => setDeleteConfirm(null)}
-                className="flex-1 bg-[#333] hover:bg-[#444] text-white py-2 rounded-lg transition-colors">
+                className="flex-1 bg-[#333] hover:bg-[#444] text-white py-2 rounded-lg">
                 Cancelar
               </button>
             </div>
