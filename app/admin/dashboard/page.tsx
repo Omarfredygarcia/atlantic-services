@@ -1,16 +1,21 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import { Proyecto, ESTADO_COLORS, EstadoProyecto } from '@/lib/types'
 
-// ─── Tipos para el tablero de rentabilidad ────────────────────────────────────
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 interface MaterialRow {
   proyecto_id: string
   categoria: string
   costo_material: number
   costo_mano_obra: number
+}
+
+interface ProyectoStats {
+  id: string
+  estado: string
 }
 
 interface StatsRentabilidad {
@@ -24,9 +29,18 @@ interface StatsRentabilidad {
   busquedasSerpApi: number
   porCategoria: Record<string, number>
   porTienda: Record<string, number>
+  matsPorProyecto: Record<string, { mat: number; mo: number; code: string }>
 }
 
-// ─── Modal de Rentabilidad ────────────────────────────────────────────────────
+// ─── Colores por tienda ───────────────────────────────────────────────────────
+const TIENDA_COLORS: Record<string, string> = {
+  'Home Depot': '#E2B84A',
+  "Lowe's": '#5BB8D4',
+  Menards: '#6DAA3F',
+  'Floor & Decor': '#A855F7',
+}
+
+// ─── Modal de Rentabilidad v2 ─────────────────────────────────────────────────
 function ModalRentabilidad({
   onClose,
   proyectos,
@@ -42,54 +56,189 @@ function ModalRentabilidad({
   const [showSchedule, setShowSchedule] = useState(false)
   const [frecuencia, setFrecuencia] = useState<'semanal' | 'mensual'>('semanal')
   const [scheduleMsg, setScheduleMsg] = useState('')
+  const [filtro, setFiltro] = useState<'all' | '30' | '7'>('all')
 
+  const barCanvasRef  = useRef<HTMLCanvasElement>(null)
+  const donutCanvasRef = useRef<HTMLCanvasElement>(null)
+  const barChartRef   = useRef<unknown>(null)
+  const donutChartRef = useRef<unknown>(null)
+
+  useEffect(() => { cargarStats() }, [])
+
+  // Cargar Chart.js desde CDN una sola vez
   useEffect(() => {
-    cargarStats()
+    if (typeof window !== 'undefined' && !(window as unknown as Record<string, unknown>).Chart) {
+      const script = document.createElement('script')
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js'
+      script.onload = () => { if (stats) renderCharts(stats) }
+      document.head.appendChild(script)
+    }
   }, [])
 
-// DESPUÉS — reemplazar con esto:
-async function cargarStats() {
-  setLoadingStats(true)
-  try {
-    const res = await fetch('/api/reportes/stats')  // ← llama a tu servidor
-    const { mats, logs, projs } = await res.json()
+  useEffect(() => {
+    if (stats) renderCharts(stats)
+  }, [stats])
 
-    const totalMateriales = mats.reduce((s: number, m: MaterialRow) => s + (m.costo_material || 0), 0)
-    const totalManoObra   = mats.reduce((s: number, m: MaterialRow) => s + (m.costo_mano_obra || 0), 0)
+  async function cargarStats() {
+    setLoadingStats(true)
+    try {
+      const res = await fetch('/api/reportes/stats')
+      const { mats, logs, projs } = await res.json()
 
-    const porCategoria: Record<string, number> = {}
-    mats.forEach((m: MaterialRow) => {
-      const cat = m.categoria || 'Sin categoría'
-      porCategoria[cat] = (porCategoria[cat] || 0) + (m.costo_material || 0)
-    })
+      const totalMateriales = mats.reduce((s: number, m: MaterialRow) => s + (m.costo_material || 0), 0)
+      const totalManoObra   = mats.reduce((s: number, m: MaterialRow) => s + (m.costo_mano_obra || 0), 0)
 
-    const porTienda: Record<string, number> = {}
-    logs.filter((l: {tienda: string, es_precio_elegido: boolean}) => l.es_precio_elegido)
-        .forEach((l: {tienda: string}) => {
+      const porCategoria: Record<string, number> = {}
+      mats.forEach((m: MaterialRow) => {
+        const cat = m.categoria || 'Sin categoría'
+        porCategoria[cat] = (porCategoria[cat] || 0) + (m.costo_material || 0)
+      })
+
+      const porTienda: Record<string, number> = {}
+      logs
+        .filter((l: { tienda: string; es_precio_elegido: boolean }) => l.es_precio_elegido)
+        .forEach((l: { tienda: string }) => {
           const t = l.tienda || 'Desconocida'
           porTienda[t] = (porTienda[t] || 0) + 1
         })
 
-    const cotizados = projs.filter((p: {estado: string}) => p.estado === 'COTIZADO').length
-    const enviados  = projs.filter((p: {estado: string}) => p.estado === 'ENVIADO').length
+      // Materiales agrupados por proyecto para la gráfica de barras
+      const matsPorProyecto: Record<string, { mat: number; mo: number; code: string }> = {}
+      proyectos.forEach(p => {
+        matsPorProyecto[p.id] = { mat: 0, mo: 0, code: p.project_code }
+      })
+      mats.forEach((m: MaterialRow) => {
+        if (matsPorProyecto[m.proyecto_id]) {
+          matsPorProyecto[m.proyecto_id].mat += m.costo_material || 0
+          matsPorProyecto[m.proyecto_id].mo  += m.costo_mano_obra || 0
+        }
+      })
 
-    setStats({
-      totalProyectos:   proyectos.length,
-      cotizados,
-      enviados,
-      totalMateriales,
-      totalManoObra,
-      totalValor:       totalMateriales + totalManoObra,
-      avgPorProyecto:   proyectos.length ? (totalMateriales + totalManoObra) / proyectos.length : 0,
-      busquedasSerpApi: mats.length * 3,
-      porCategoria,
-      porTienda,
-    })
-  } catch (e) {
-    console.error(e)
+      const cotizados = projs.filter((p: ProyectoStats) => p.estado === 'COTIZADO').length
+      const enviados  = projs.filter((p: ProyectoStats) => p.estado === 'ENVIADO').length
+
+      setStats({
+        totalProyectos:   proyectos.length,
+        cotizados,
+        enviados,
+        totalMateriales,
+        totalManoObra,
+        totalValor:       totalMateriales + totalManoObra,
+        avgPorProyecto:   proyectos.length ? (totalMateriales + totalManoObra) / proyectos.length : 0,
+        busquedasSerpApi: mats.length * 3,
+        porCategoria,
+        porTienda,
+        matsPorProyecto,
+      })
+    } catch (e) {
+      console.error(e)
+    }
+    setLoadingStats(false)
   }
-  setLoadingStats(false)
-}
+
+  function renderCharts(s: StatsRentabilidad) {
+    const Chart = (window as unknown as Record<string, unknown>).Chart as {
+      new (...args: unknown[]): unknown
+    } | undefined
+    if (!Chart) return
+
+    // ── Gráfica barras apiladas ──────────────────────────────────────────────
+    if (barCanvasRef.current) {
+      if (barChartRef.current) (barChartRef.current as { destroy: () => void }).destroy()
+      const topProjs = Object.entries(s.matsPorProyecto)
+        .filter(([, v]) => v.mat > 0)
+        .slice(0, 6)
+
+      barChartRef.current = new Chart(barCanvasRef.current, {
+        type: 'bar',
+        data: {
+          labels: topProjs.map(([, v]) => v.code),
+          datasets: [
+            {
+              label: 'Materiales',
+              data: topProjs.map(([, v]) => Math.round(v.mat)),
+              backgroundColor: '#3266ad',
+              stack: 's',
+            },
+            {
+              label: 'Mano de obra',
+              data: topProjs.map(([, v]) => Math.round(v.mo)),
+              backgroundColor: '#E2B84A',
+              stack: 's',
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx: { dataset: { label: string }; raw: number }) =>
+                  `${ctx.dataset.label}: $${ctx.raw.toLocaleString('en-US')}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: '#888', font: { size: 11 } },
+              grid: { display: false },
+            },
+            y: {
+              stacked: true,
+              ticks: {
+                color: '#888',
+                font: { size: 11 },
+                callback: (v: number) => '$' + Math.round(v / 1000) + 'k',
+              },
+              grid: { color: 'rgba(255,255,255,0.05)' },
+            },
+          },
+        },
+      })
+    }
+
+    // ── Donut categorías ─────────────────────────────────────────────────────
+    if (donutCanvasRef.current) {
+      if (donutChartRef.current) (donutChartRef.current as { destroy: () => void }).destroy()
+      const sorted = Object.entries(s.porCategoria)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+      const colors = ['#3266ad', '#E2B84A', '#6DAA3F', '#D85A30', '#A855F7']
+
+      donutChartRef.current = new Chart(donutCanvasRef.current, {
+        type: 'doughnut',
+        data: {
+          labels: sorted.map(([k]) => k),
+          datasets: [{
+            data: sorted.map(([, v]) => Math.round(v)),
+            backgroundColor: colors,
+            borderWidth: 2,
+            borderColor: '#141414',
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#999', font: { size: 11 }, boxWidth: 10, padding: 8 },
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx: { label: string; raw: number }) =>
+                  `${ctx.label}: $${ctx.raw.toLocaleString('en-US')}`,
+              },
+            },
+          },
+          cutout: '62%',
+        },
+      })
+    }
+  }
 
   async function enviarReporte() {
     if (!emailDestino) return
@@ -116,16 +265,6 @@ async function cargarStats() {
   async function guardarProgramacion() {
     setScheduleMsg('Guardando programación...')
     try {
-      const supabase = createClient()
-      await supabase.from('parametros').upsert({
-        categoria: '__reporte_rentabilidad__',
-        desperdicio_pct: 0,
-        mano_obra_pct: 0,
-        activo: true,
-        // Guardamos config como JSON en error_detalle reutilizando la tabla
-        // En producción esto debería ser una tabla "configuraciones"
-      })
-      // Por ahora guardamos en localStorage hasta tener tabla configuraciones
       localStorage.setItem(
         'reporte_schedule',
         JSON.stringify({ email: emailDestino, frecuencia, activo: true })
@@ -136,74 +275,110 @@ async function cargarStats() {
     }
   }
 
-  function fmt(n: number) {
-    return '$' + Math.round(n).toLocaleString('en-US')
-  }
-
-  function fmtK(n: number) {
-    return n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : fmt(n)
-  }
+  function fmt(n: number) { return '$' + Math.round(n).toLocaleString('en-US') }
+  function fmtK(n: number) { return n >= 1000 ? '$' + (n / 1000).toFixed(1) + 'k' : fmt(n) }
 
   const topCategorias = Object.entries(stats?.porCategoria || {})
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-
+    .sort((a, b) => b[1] - a[1]).slice(0, 5)
   const maxCat = topCategorias[0]?.[1] || 1
 
   const topTiendas = Object.entries(stats?.porTienda || {})
     .sort((a, b) => b[1] - a[1])
-
   const totalTiendas = topTiendas.reduce((s, [, v]) => s + v, 0) || 1
 
-  const TIENDA_COLORS: Record<string, string> = {
-    'Home Depot': '#E2B84A',
-    "Lowe's": '#5BB8D4',
-    Menards: '#6DAA3F',
-    'Floor & Decor': '#A855F7',
-  }
+  // Proyectos recientes para la tabla
+  const proyectosRecientes = proyectos.slice(0, 6)
 
   return (
-    // Overlay
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto"
-      style={{ background: 'rgba(0,0,0,0.75)', paddingTop: '40px', paddingBottom: '40px' }}
+      style={{ background: 'rgba(0,0,0,0.80)', paddingTop: '32px', paddingBottom: '40px' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      {/* Panel */}
       <div
         className="relative w-full mx-4 rounded-2xl border border-[#333] overflow-hidden"
-        style={{ maxWidth: '960px', background: '#141414' }}
+        style={{ maxWidth: '1080px', background: '#141414' }}
       >
-        {/* Header del modal */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#333]" style={{ background: '#1C1C1C' }}>
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <div
+          className="flex items-center justify-between px-6 py-4 border-b border-[#333]"
+          style={{ background: '#1C1C1C' }}
+        >
           <div>
             <h2 className="text-white font-bold text-lg">📊 Tablero de Rentabilidad</h2>
             <p className="text-gray-400 text-sm mt-0.5">Atlantic Services LLC · Motor RPA v2.1</p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none transition-colors"
-          >
-            ×
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Filtros */}
+            {(['all', '30', '7'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFiltro(f)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  filtro === f
+                    ? 'bg-[#C9A84C] border-[#C9A84C] text-black font-bold'
+                    : 'border-[#444] text-gray-400 hover:border-[#C9A84C] hover:text-[#C9A84C]'
+                }`}
+              >
+                {f === 'all' ? 'Todos' : f === '30' ? 'Últimos 30d' : 'Últimos 7d'}
+              </button>
+            ))}
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white text-2xl leading-none ml-2 transition-colors"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="p-6">
           {loadingStats ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="text-gray-400 text-sm animate-pulse">Calculando métricas...</div>
+            <div className="flex items-center justify-center py-24">
+              <div className="text-center">
+                <div className="text-[#C9A84C] text-3xl mb-3 animate-pulse">⬡</div>
+                <p className="text-gray-400 text-sm animate-pulse">Calculando métricas...</p>
+              </div>
             </div>
           ) : stats ? (
             <>
-              {/* KPIs */}
-              <div className="grid grid-cols-4 gap-3 mb-6">
+              {/* ── KPIs ────────────────────────────────────────────────── */}
+              <div className="grid grid-cols-4 gap-3 mb-5">
                 {[
-                  { label: 'Proyectos', value: stats.totalProyectos.toString(), sub: `${stats.cotizados} cotizados · ${stats.enviados} enviados`, color: 'text-white' },
-                  { label: 'Costo materiales', value: fmtK(stats.totalMateriales), sub: `${stats.busquedasSerpApi} consultas SerpApi`, color: 'text-[#C9A84C]' },
-                  { label: 'Mano de obra est.', value: fmtK(stats.totalManoObra), sub: 'prom. 35% sobre materiales', color: 'text-[#5BB8D4]' },
-                  { label: 'Valor total cotizado', value: fmtK(stats.totalValor), sub: `prom. ${fmtK(stats.avgPorProyecto)}/proyecto`, color: 'text-green-400' },
+                  {
+                    label: 'Proyectos',
+                    value: stats.totalProyectos.toString(),
+                    sub: `${stats.cotizados} cotizados · ${stats.enviados} enviados`,
+                    color: 'text-white',
+                    border: 'border-[#333]',
+                  },
+                  {
+                    label: 'Costo materiales',
+                    value: fmtK(stats.totalMateriales),
+                    sub: `${stats.busquedasSerpApi} consultas SerpApi`,
+                    color: 'text-[#C9A84C]',
+                    border: 'border-[#C9A84C33]',
+                  },
+                  {
+                    label: 'Mano de obra est.',
+                    value: fmtK(stats.totalManoObra),
+                    sub: 'prom. 35% sobre materiales',
+                    color: 'text-[#5BB8D4]',
+                    border: 'border-[#5BB8D433]',
+                  },
+                  {
+                    label: 'Valor total cotizado',
+                    value: fmtK(stats.totalValor),
+                    sub: `prom. ${fmtK(stats.avgPorProyecto)}/proyecto`,
+                    color: 'text-green-400',
+                    border: 'border-green-900',
+                  },
                 ].map(k => (
-                  <div key={k.label} className="rounded-xl p-4 border border-[#333]" style={{ background: '#1C1C1C' }}>
+                  <div
+                    key={k.label}
+                    className={`rounded-xl p-4 border ${k.border}`}
+                    style={{ background: '#1C1C1C' }}
+                  >
                     <p className="text-gray-400 text-xs mb-1">{k.label}</p>
                     <p className={`text-2xl font-bold ${k.color}`}>{k.value}</p>
                     <p className="text-gray-500 text-xs mt-1">{k.sub}</p>
@@ -211,10 +386,13 @@ async function cargarStats() {
                 ))}
               </div>
 
-              {/* Ahorro vs manual */}
-              <div className="rounded-xl border border-green-800 mb-6 p-4" style={{ background: 'rgba(34,197,94,0.06)' }}>
+              {/* ── Banner automatización ────────────────────────────────── */}
+              <div
+                className="rounded-xl border border-green-900 mb-5 p-4"
+                style={{ background: 'rgba(34,197,94,0.06)' }}
+              >
                 <p className="text-green-400 text-xs font-bold uppercase tracking-wider mb-3">
-                  Valor generado por automatización
+                  ✦ Valor generado por automatización
                 </p>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
@@ -235,14 +413,55 @@ async function cargarStats() {
                     <p className="text-green-300 text-xl font-bold">
                       {stats.busquedasSerpApi} búsquedas
                     </p>
-                    <p className="text-gray-500 text-xs">comparativos de precio en 3 tiendas</p>
-                    <p className="text-gray-600 text-xs">automáticos via SerpApi</p>
+                    <p className="text-gray-500 text-xs">comparativos en 3 tiendas</p>
+                    <p className="text-gray-600 text-xs">automáticos vía SerpApi</p>
                   </div>
                 </div>
               </div>
 
-              {/* Gráficas: categorías + tiendas */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              {/* ── Fila 1: Barras apiladas + Donut ─────────────────────── */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {/* Barras apiladas por proyecto */}
+                <div className="rounded-xl border border-[#333] p-4" style={{ background: '#1C1C1C' }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+                      Materiales vs mano de obra por proyecto
+                    </p>
+                    <div className="flex gap-3 text-xs text-gray-500">
+                      <span><span className="inline-block w-2 h-2 rounded-sm mr-1" style={{ background: '#3266ad' }}></span>Mat.</span>
+                      <span><span className="inline-block w-2 h-2 rounded-sm mr-1" style={{ background: '#E2B84A' }}></span>M.O.</span>
+                    </div>
+                  </div>
+                  <div style={{ height: '200px' }}>
+                    {Object.values(stats.matsPorProyecto).some(v => v.mat > 0) ? (
+                      <canvas ref={barCanvasRef} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-gray-600 text-sm">Sin datos de proyectos aún</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Donut categorías */}
+                <div className="rounded-xl border border-[#333] p-4" style={{ background: '#1C1C1C' }}>
+                  <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">
+                    Distribución por categoría
+                  </p>
+                  <div style={{ height: '200px' }}>
+                    {topCategorias.length > 0 ? (
+                      <canvas ref={donutCanvasRef} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-gray-600 text-sm">Sin datos de materiales aún</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Fila 2: Barras categorías + Barras tiendas ──────────── */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 {/* Por categoría */}
                 <div className="rounded-xl border border-[#333] p-4" style={{ background: '#1C1C1C' }}>
                   <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">
@@ -286,7 +505,9 @@ async function cargarStats() {
                           <div key={tienda}>
                             <div className="flex justify-between text-xs mb-1">
                               <span className="text-gray-300">{tienda}</span>
-                              <span className="font-mono" style={{ color }}>{pct}% ({count})</span>
+                              <span className="font-mono" style={{ color }}>
+                                {pct}% ({count})
+                              </span>
                             </div>
                             <div className="h-2 rounded-full overflow-hidden" style={{ background: '#2a2a2a' }}>
                               <div
@@ -305,12 +526,78 @@ async function cargarStats() {
                 </div>
               </div>
 
-              {/* Sección envío email */}
-              <div className="rounded-xl border border-[#2a2a2a] p-4" style={{ background: '#1C1C1C' }}>
+              {/* ── Tabla proyectos recientes ────────────────────────────── */}
+              <div className="rounded-xl border border-[#333] mb-4 overflow-hidden" style={{ background: '#1C1C1C' }}>
+                <div className="px-4 py-3 border-b border-[#333]">
+                  <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
+                    Proyectos recientes
+                  </p>
+                </div>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr style={{ background: '#252525' }}>
+                      {['Código', 'Cliente', 'Materiales', 'M. Obra', 'Total', 'Estado'].map(h => (
+                        <th key={h} className="text-left px-4 py-2 text-gray-500 font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {proyectosRecientes.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-6 text-center text-gray-600">
+                          Sin proyectos
+                        </td>
+                      </tr>
+                    ) : (
+                      proyectosRecientes.map((p, i) => {
+                        const d = stats.matsPorProyecto[p.id] || { mat: 0, mo: 0 }
+                        const pillColor =
+                          p.estado === 'ENVIADO'     ? 'bg-teal-900 text-teal-300' :
+                          p.estado === 'COTIZADO'    ? 'bg-purple-900 text-purple-300' :
+                          p.estado === 'EN_PROCESO'  ? 'bg-yellow-900 text-yellow-300' :
+                          p.estado === 'ERROR'       ? 'bg-red-900 text-red-300' :
+                                                       'bg-gray-800 text-gray-400'
+                        return (
+                          <tr
+                            key={p.id}
+                            className={`border-t border-[#2a2a2a] ${i % 2 === 0 ? '' : 'bg-[#1a1a1a]'}`}
+                          >
+                            <td className="px-4 py-2.5 font-mono text-[#C9A84C] font-bold">
+                              {p.project_code}
+                            </td>
+                            <td className="px-4 py-2.5 text-gray-300">
+                              {p.cliente_nombre?.split(' ').slice(0, 2).join(' ')}
+                            </td>
+                            <td className="px-4 py-2.5 text-gray-300 font-mono">
+                              {d.mat ? fmtK(d.mat) : '—'}
+                            </td>
+                            <td className="px-4 py-2.5 text-[#5BB8D4] font-mono">
+                              {d.mo ? fmtK(d.mo) : '—'}
+                            </td>
+                            <td className="px-4 py-2.5 text-white font-mono font-bold">
+                              {d.mat ? fmtK(d.mat + d.mo) : '—'}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${pillColor}`}>
+                                {p.estado}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* ── Panel envío email ────────────────────────────────────── */}
+              <div
+                className="rounded-xl border border-[#2a2a2a] p-4"
+                style={{ background: '#1C1C1C' }}
+              >
                 <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">
                   Enviar / programar reporte
                 </p>
-
                 <div className="flex gap-3 items-end flex-wrap">
                   <div className="flex-1 min-w-[200px]">
                     <label className="text-gray-500 text-xs block mb-1">Email destino</label>
@@ -337,10 +624,14 @@ async function cargarStats() {
                   </button>
                 </div>
 
-                {/* Opciones de programación */}
                 {showSchedule && (
-                  <div className="mt-4 p-4 rounded-lg border border-[#333]" style={{ background: '#252525' }}>
-                    <p className="text-gray-400 text-xs mb-3">Configurar envío automático periódico</p>
+                  <div
+                    className="mt-4 p-4 rounded-lg border border-[#333]"
+                    style={{ background: '#252525' }}
+                  >
+                    <p className="text-gray-400 text-xs mb-3">
+                      Configurar envío automático periódico
+                    </p>
                     <div className="flex gap-3 items-end flex-wrap">
                       <div>
                         <label className="text-gray-500 text-xs block mb-1">Frecuencia</label>
@@ -366,21 +657,31 @@ async function cargarStats() {
                       </p>
                     )}
                     <p className="text-gray-600 text-xs mt-2">
-                      ⚠️ El envío automático requiere un cron externo (cron-job.org) apuntando a{' '}
-                      <code className="text-[#C9A84C]">/api/reportes/rentabilidad/cron</code>
+                      ⚠️ Requiere cron en cron-job.org →{' '}
+                      <code className="text-[#C9A84C]">/api/reportes/rentabilidad</code> (GET)
                     </p>
                   </div>
                 )}
 
                 {reporteMsg && (
-                  <p className={`text-xs mt-3 ${reporteMsg.startsWith('✅') ? 'text-green-400' : reporteMsg.startsWith('❌') ? 'text-red-400' : 'text-blue-400'}`}>
+                  <p
+                    className={`text-xs mt-3 ${
+                      reporteMsg.startsWith('✅')
+                        ? 'text-green-400'
+                        : reporteMsg.startsWith('❌')
+                        ? 'text-red-400'
+                        : 'text-blue-400'
+                    }`}
+                  >
                     {reporteMsg}
                   </p>
                 )}
               </div>
             </>
           ) : (
-            <p className="text-red-400 text-sm">Error al cargar estadísticas</p>
+            <p className="text-red-400 text-sm text-center py-12">
+              Error al cargar estadísticas
+            </p>
           )}
         </div>
       </div>
@@ -408,10 +709,7 @@ export default function DashboardPage() {
   async function checkAuth() {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/admin/login')
-      return
-    }
+    if (!user) { router.push('/admin/login'); return }
     setUsuario(user.email || '')
   }
 
@@ -498,7 +796,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#141414]">
-      {/* Modal de Rentabilidad */}
       {showRentabilidad && (
         <ModalRentabilidad
           onClose={() => setShowRentabilidad(false)}
@@ -567,17 +864,12 @@ export default function DashboardPage() {
           >
             📦 Catálogo
           </button>
-
-          {/* ─── NUEVO: Botón Rentabilidad ─────────────────────────────── */}
           <button
             onClick={() => setShowRentabilidad(true)}
             className="bg-[#1C1C1C] hover:bg-[#252525] text-[#C9A84C] font-bold px-5 py-2 rounded-lg border border-[#C9A84C] transition-colors"
           >
             📊 Rentabilidad
           </button>
-          {/* ─────────────────────────────────────────────────────────────── */}
-
-          {/* Filtro */}
           <select
             value={filtroEstado}
             onChange={e => setFiltroEstado(e.target.value)}
@@ -593,7 +885,6 @@ export default function DashboardPage() {
           </select>
         </div>
 
-        {/* Mensaje RPA / Email */}
         {rpaMsg && (
           <div className={`mb-4 px-4 py-2 rounded-lg text-sm font-medium ${
             rpaMsg.startsWith('✅') ? 'bg-green-900/30 text-green-400 border border-green-700' :
@@ -609,7 +900,7 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#C9A84C]">
-                {['ID Proyecto','Cliente','Tipo','Área ft²','Estado','Último Paso','Fecha','Acciones'].map(h => (
+                {['ID Proyecto', 'Cliente', 'Tipo', 'Área ft²', 'Estado', 'Último Paso', 'Fecha', 'Acciones'].map(h => (
                   <th key={h} className="text-black font-bold text-sm px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
@@ -622,7 +913,7 @@ export default function DashboardPage() {
               ) : proyectosFiltrados.map((p, i) => (
                 <tr
                   key={p.id}
-                  className={`border-t border-[#333] hover:bg-[#252525] transition-colors cursor-pointer ${i%2===0?'':'bg-[#1A1A1A]'}`}
+                  className={`border-t border-[#333] hover:bg-[#252525] transition-colors cursor-pointer ${i % 2 === 0 ? '' : 'bg-[#1A1A1A]'}`}
                   onClick={() => router.push(`/admin/proyectos/${p.id}`)}
                 >
                   <td className="px-4 py-3 text-[#C9A84C] font-mono text-sm font-bold">{p.project_code}</td>
@@ -681,7 +972,6 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
-
         <p className="text-gray-600 text-xs mt-3 text-center">
           Click en una fila para editar el proyecto
         </p>
