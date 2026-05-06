@@ -43,13 +43,13 @@ function MaterialRow({
     const item = catalogo.find(
       c => c.categoria_nombre === mat.categoria && c.material === nuevoMaterial
     )
-    if (item) {
-      if (item.unidad_nombre)    onUpdate('unidad',           item.unidad_nombre)
-      if (item.tienda_nombre)    onUpdate('tienda_preferida', item.tienda_nombre)
-      if (item.search_query)     onUpdate('search_query',     item.search_query)
-      if (item.desperdicio_pct)  onUpdate('desperdicio_pct',  item.desperdicio_pct)
-      if (item.mano_obra_pct)    onUpdate('mano_obra_pct',    item.mano_obra_pct)
-    }
+  if (item) {
+    if (item.unidad_nombre)   onUpdate('unidad',           item.unidad_nombre)
+    if (item.tienda_nombre)   onUpdate('tienda_preferida', item.tienda_nombre)
+    if (item.search_query)    onUpdate('search_query',     item.search_query)
+    if (item.desperdicio_pct) onUpdate('desperdicio_pct',  item.desperdicio_pct)
+    if (item.mano_obra_pct)   onUpdate('mano_obra_pct',    item.mano_obra_pct)
+  }
   }
 
   return (
