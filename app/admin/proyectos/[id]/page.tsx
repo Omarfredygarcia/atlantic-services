@@ -43,8 +43,12 @@ function MaterialRow({
     const item = catalogo.find(
       c => c.categoria_nombre === mat.categoria && c.material === nuevoMaterial
     )
-    if (item?.unidad_nombre) {
-      onUpdate('unidad', item.unidad_nombre)
+    if (item) {
+      if (item.unidad_nombre)    onUpdate('unidad',           item.unidad_nombre)
+      if (item.tienda_nombre)    onUpdate('tienda_preferida', item.tienda_nombre)
+      if (item.search_query)     onUpdate('search_query',     item.search_query)
+      if (item.desperdicio_pct)  onUpdate('desperdicio_pct',  item.desperdicio_pct)
+      if (item.mano_obra_pct)    onUpdate('mano_obra_pct',    item.mano_obra_pct)
     }
   }
 
@@ -268,6 +272,7 @@ export default function ProyectoFormPage() {
               area_ft2:         m.area_ft2 || 0,
               unidad:           m.unidad || 'ft2',  // unidad auto-completada desde catálogo
               tienda_preferida: m.tienda_preferida,
+              search_query:     m.search_query,     // search_query auto-completado desde catálogo
             }))
           )
           if (matError) throw matError
