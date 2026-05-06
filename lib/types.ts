@@ -41,6 +41,7 @@ export interface Material {
   fecha_precio?: string
   fuente_precio?: string
   created_at: string
+  search_query?: string
 }
 
 // ── Tablas de referencia (modelo relacional) ──────────────────────────────────
