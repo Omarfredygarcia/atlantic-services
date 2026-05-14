@@ -48,6 +48,7 @@ export interface Material {
   // ── Calculados por el RPA ─────────────────────────────────
   precio_unitario?: number
   desperdicio_pct?: number
+  mano_obra_pct?:   number
   cantidad_total?:  number
   costo_material?:  number
   costo_mano_obra?: number
