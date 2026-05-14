@@ -1,5 +1,6 @@
-export type EstadoProyecto = 'PENDIENTE' | 'EN_PROCESO' | 'COTIZADO' | 'ENVIADO' | 'COMPLETADO' | 'ERROR'
+export type EstadoProyecto = 'PENDIENTE' | 'EN_PROCESO' | 'COTIZADO' | 'ENVIADO' | 'ERROR'
 export type RolUsuario = 'admin' | 'operador'
+export type PrecioSource = 'serpapi' | 'scrapingbee' | 'fixed' | 'manual'
 
 export interface Proyecto {
   id: string
@@ -28,61 +29,85 @@ export interface Material {
   id: string
   proyecto_id: string
   linea: number
-  categoria: string        // texto — foto del momento de cotización
-  material: string
-  area_ft2: number
-  unidad: string           // texto — viene del catálogo al crear
+
+  // ── FKs v21 (modelo relacional correcto) ──────────────────
+  catalogo_id?:  string   // FK → catalogo.id
+  categoria_id?: string   // FK → categorias.id
+  tienda_id?:    string   // FK → tiendas.id
+  unidad_id?:    string   // FK → unidades.id
+
+  // ── Campos de texto (snapshot del momento de cotización) ──
+  // Se mantienen para historial y compatibilidad con RPA
+  categoria:        string
+  material:         string
+  area_ft2:         number
+  unidad:           string
   tienda_preferida?: string
+  search_query?:    string
+
+  // ── Calculados por el RPA ─────────────────────────────────
   precio_unitario?: number
   desperdicio_pct?: number
-  cantidad_total?: number
-  costo_material?: number
+  cantidad_total?:  number
+  costo_material?:  number
   costo_mano_obra?: number
-  fecha_precio?: string
-  fuente_precio?: string
+  fecha_precio?:    string
+  fuente_precio?:   string
+
   created_at: string
-  search_query?: string
+  updated_at?: string
 }
 
-// ── Tablas de referencia (modelo relacional) ──────────────────────────────────
+// ── Tablas de referencia ──────────────────────────────────────
 export interface CategoriaRef {
   id: string
   nombre: string
+  csi_division?: string
+  csi_nombre?: string
   activo?: boolean
 }
 
 export interface TiendaRef {
   id: string
   nombre: string
+  url?: string
   activo?: boolean
 }
 
 export interface UnidadRef {
   id: string
-  nombre: string
+  codigo: string
+  descripcion?: string
   activo?: boolean
 }
 
-// ── CatalogoItem — refleja el modelo relacional actual ────────────────────────
+// ── CatalogoItem — modelo relacional v20 completo ────────────
 export interface CatalogoItem {
   id: string
   material: string
   precio_base: number
+  precio_source: PrecioSource
+  precio_base_usd?: number
   desperdicio_pct: number
   mano_obra_pct: number
   search_query?: string
   activo?: boolean
-  // Relaciones (vienen del JOIN en Supabase)
+
+  // FKs
   categoria_id: string
-  tienda_id: string
-  unidad_id: string
-  categorias?: { nombre: string }
+  tienda_id:    string
+  unidad_id:    string
+
+  // Joins (vienen de Supabase select con *)
+  categorias?: { nombre: string; csi_division?: string; csi_nombre?: string }
   tiendas?:   { nombre: string }
-  unidades?:  { nombre: string }
-  // Nombres planos para uso fácil en UI (derivados del JOIN)
+  unidades?:  { codigo: string; descripcion?: string }
+
+  // Campos planos derivados del JOIN — para uso fácil en UI
   categoria_nombre?: string
-  tienda_nombre?: string
-  unidad_nombre?: string
+  tienda_nombre?:    string
+  unidad_codigo?:    string
+  unidad_desc?:      string
 }
 
 export interface Usuario {
@@ -93,20 +118,23 @@ export interface Usuario {
   activo: boolean
 }
 
-// ── Constantes de UI — solo las que no vienen de BD ──────────────────────────
-// CATEGORIAS y TIENDAS se eliminaron — ahora se leen desde Supabase
-// Mantener TIPOS_PROYECTO porque no tiene tabla propia aún
-
+// ── Constantes UI ─────────────────────────────────────────────
 export const TIPOS_PROYECTO = [
   'Flooring', 'Drywall', 'Paint', 'Siding', 'Carpentry',
-  'Waterproofing', 'Remodeling', 'Full Renovation', 'Other'
+  'Waterproofing', 'Remodeling', 'Full Renovation', 'Commercial', 'Other'
 ]
 
 export const ESTADO_COLORS: Record<EstadoProyecto, string> = {
-  PENDIENTE:   'bg-yellow-100 text-yellow-800',
-  EN_PROCESO:  'bg-blue-100 text-blue-800',
-  COTIZADO:    'bg-purple-100 text-purple-800',
-  ENVIADO:     'bg-teal-100 text-teal-800',
-  COMPLETADO:  'bg-green-100 text-green-800',
-  ERROR:       'bg-red-100 text-red-800',
+  PENDIENTE:  'bg-yellow-100 text-yellow-800',
+  EN_PROCESO: 'bg-blue-100 text-blue-800',
+  COTIZADO:   'bg-purple-100 text-purple-800',
+  ENVIADO:    'bg-teal-100 text-teal-800',
+  ERROR:      'bg-red-100 text-red-800',
+}
+
+export const PRECIO_SOURCE_LABELS: Record<PrecioSource, string> = {
+  serpapi:     '🌐 Google Shopping',
+  scrapingbee: '🐝 Scraping directo',
+  fixed:       '🔒 Precio fijo',
+  manual:      '✏️ Manual',
 }
