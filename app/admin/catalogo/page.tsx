@@ -9,6 +9,7 @@ interface CatalogoItem {
   id: string
   material: string
   precio_base: number
+  precio_source: string          // ← NUEVO
   desperdicio_pct: number
   mano_obra_pct: number
   search_query: string | null
@@ -26,16 +27,25 @@ interface CategoriaRef { id: string; nombre: string }
 interface TiendaRef    { id: string; nombre: string }
 interface UnidadRef    { id: string; codigo: string; descripcion: string }
 
+// Opciones de precio_source con descripción visible
+const PRECIO_SOURCE_OPTIONS = [
+  { value: 'fixed',       label: 'Fixed — precio fijo de BD',          color: 'text-blue-400' },
+  { value: 'manual',      label: 'Manual — ingresado por usuario',      color: 'text-yellow-400' },
+  { value: 'serpapi',     label: 'SerpApi — Google Shopping',           color: 'text-green-400' },
+  { value: 'scrapingbee', label: 'ScrapingBee — scraping directo',      color: 'text-purple-400' },
+]
+
 const FORM_EMPTY = {
-  categoria_id:   '',
-  tienda_id:      '',
-  unidad_id:      '',
-  material:       '',
-  precio_base:    0,
+  categoria_id:    '',
+  tienda_id:       '',
+  unidad_id:       '',
+  material:        '',
+  precio_base:     0,
+  precio_source:   'serpapi',    // ← NUEVO — default más común
   desperdicio_pct: 0.10,
-  mano_obra_pct:  0.35,
-  search_query:   '',
-  activo:         true,
+  mano_obra_pct:   0.35,
+  search_query:    '',
+  activo:          true,
 }
 
 // ── Página principal ───────────────────────────────────────────────────────────
@@ -54,6 +64,7 @@ export default function CatalogoPage() {
   const [filterCat,     setFilterCat]     = useState('TODAS')
   const [filterTienda,  setFilterTienda]  = useState('TODAS')
   const [filterActivo,  setFilterActivo]  = useState('TODOS')
+  const [filterSource,  setFilterSource]  = useState('TODOS')   // ← NUEVO filtro
   const [modal,         setModal]         = useState(false)
   const [editing,       setEditing]       = useState<CatalogoItem | null>(null)
   const [form,          setForm]          = useState({ ...FORM_EMPTY })
@@ -75,7 +86,6 @@ export default function CatalogoPage() {
     const supabase = createClient()
 
     const [catRes, tRes, uRes, cRes] = await Promise.all([
-      // JOIN para resolver nombres desde FKs
       supabase.from('catalogo')
         .select('*, categorias(nombre), tiendas(nombre), unidades(codigo, descripcion)')
         .order('material'),
@@ -87,9 +97,10 @@ export default function CatalogoPage() {
     if (catRes.data) {
       const normalized: CatalogoItem[] = catRes.data.map((item: any) => ({
         ...item,
-        categoria_nombre: item.categorias?.nombre  || '—',
-        tienda_nombre:    item.tiendas?.nombre     || '—',
-        unidad_codigo:    item.unidades?.codigo    || '—',
+        categoria_nombre: item.categorias?.nombre || '—',
+        tienda_nombre:    item.tiendas?.nombre    || '—',
+        unidad_codigo:    item.unidades?.codigo   || '—',
+        precio_source:    item.precio_source      || 'serpapi',   // ← NUEVO
       }))
       setItems(normalized)
     }
@@ -116,6 +127,7 @@ export default function CatalogoPage() {
       unidad_id:       form.unidad_id,
       material:        form.material.trim(),
       precio_base:     form.precio_base,
+      precio_source:   form.precio_source,     // ← NUEVO
       desperdicio_pct: form.desperdicio_pct,
       mano_obra_pct:   form.mano_obra_pct,
       search_query:    form.search_query.trim() || null,
@@ -173,6 +185,7 @@ export default function CatalogoPage() {
       unidad_id:       item.unidad_id,
       material:        item.material,
       precio_base:     item.precio_base,
+      precio_source:   item.precio_source || 'serpapi',   // ← NUEVO
       desperdicio_pct: item.desperdicio_pct,
       mano_obra_pct:   item.mano_obra_pct,
       search_query:    item.search_query || '',
@@ -182,6 +195,22 @@ export default function CatalogoPage() {
   }
 
   function cerrarModal() { setModal(false); setEditing(null) }
+
+  // ── Helper badge precio_source ────────────────────────────────────────────────
+  function SourceBadge({ source }: { source: string }) {
+    const map: Record<string, { label: string; cls: string }> = {
+      fixed:       { label: 'FIXED',       cls: 'bg-blue-900/50 text-blue-400 border-blue-700' },
+      manual:      { label: 'MANUAL',      cls: 'bg-yellow-900/50 text-yellow-400 border-yellow-700' },
+      serpapi:     { label: 'SERPAPI',      cls: 'bg-green-900/50 text-green-400 border-green-700' },
+      scrapingbee: { label: 'SCRAPINGBEE', cls: 'bg-purple-900/50 text-purple-400 border-purple-700' },
+    }
+    const s = map[source] || { label: source.toUpperCase(), cls: 'bg-gray-800 text-gray-400 border-gray-600' }
+    return (
+      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${s.cls}`}>
+        {s.label}
+      </span>
+    )
+  }
 
   // ── Filtros ──────────────────────────────────────────────────────────────────
   const catsFiltro    = ['TODAS', ...categorias.map(c => c.nombre)]
@@ -196,13 +225,14 @@ export default function CatalogoPage() {
     const matchTienda = filterTienda === 'TODAS' || i.tienda_nombre    === filterTienda
     const matchActivo = filterActivo === 'TODOS' ||
       (filterActivo === 'ACTIVO' ? i.activo : !i.activo)
-    return matchSearch && matchCat && matchTienda && matchActivo
+    const matchSource = filterSource === 'TODOS' || i.precio_source === filterSource  // ← NUEVO
+    return matchSearch && matchCat && matchTienda && matchActivo && matchSource
   })
 
   const stats = {
-    total:   items.length,
-    activos: items.filter(i => i.activo).length,
-    cats:    new Set(items.map(i => i.categoria_nombre)).size,
+    total:    items.length,
+    activos:  items.filter(i => i.activo).length,
+    cats:     new Set(items.map(i => i.categoria_nombre)).size,
     sinQuery: items.filter(i => !i.search_query).length,
   }
 
@@ -254,7 +284,6 @@ export default function CatalogoPage() {
           }`}>{msg}</div>
         )}
 
-        {/* Alerta si hay materiales sin search_query */}
         {stats.sinQuery > 0 && (
           <div className="mb-4 px-4 py-2 rounded-lg text-sm bg-yellow-900/30 text-yellow-400 border border-yellow-700">
             ⚠️ <strong>{stats.sinQuery} material(es)</strong> sin search_query — el RPA usará el nombre del material como búsqueda.
@@ -283,6 +312,14 @@ export default function CatalogoPage() {
             className="bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
             {tiendasFiltro.map(t => <option key={t}>{t}</option>)}
           </select>
+          {/* NUEVO: filtro por precio_source */}
+          <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
+            className="bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
+            <option value="TODOS">Todos los orígenes</option>
+            {PRECIO_SOURCE_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
           <select value={filterActivo} onChange={e => setFilterActivo(e.target.value)}
             className="bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
             <option value="TODOS">Todos</option>
@@ -297,16 +334,16 @@ export default function CatalogoPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#C9A84C]">
-                {['Categoría','Material','Search Query','Unidad','Tienda','Precio Base','Desperd.','M. Obra','Estado','Acciones'].map(h => (
+                {['Categoría','Material','Origen Precio','Search Query','Unidad','Tienda','Precio Base','Desperd.','M. Obra','Estado','Acciones'].map(h => (
                   <th key={h} className="text-black font-bold text-xs px-3 py-3 text-left whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={10} className="text-center text-gray-400 py-12">Cargando catálogo...</td></tr>
+                <tr><td colSpan={11} className="text-center text-gray-400 py-12">Cargando catálogo...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={10} className="text-center text-gray-400 py-12">No hay materiales</td></tr>
+                <tr><td colSpan={11} className="text-center text-gray-400 py-12">No hay materiales</td></tr>
               ) : filtered.map((item, i) => (
                 <tr key={item.id}
                   className={`border-t border-[#333] hover:bg-[#252525] transition-colors ${i%2===0?'':'bg-[#1A1A1A]'}`}>
@@ -314,6 +351,10 @@ export default function CatalogoPage() {
                     {item.categoria_nombre}
                   </td>
                   <td className="px-3 py-3 text-white text-sm">{item.material}</td>
+                  {/* NUEVA columna Origen Precio */}
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <SourceBadge source={item.precio_source} />
+                  </td>
                   <td className="px-3 py-3 max-w-[200px]">
                     {item.search_query
                       ? <span className="text-blue-400 text-xs font-mono">{item.search_query}</span>
@@ -364,10 +405,8 @@ export default function CatalogoPage() {
 
       {/* ── Modal Nuevo / Editar ───────────────────────────────────────────────── */}
       {modal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={cerrarModal}>
-          <div className="bg-[#1C1C1C] border border-[#333] rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1C1C1C] border border-[#333] rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
 
             <h2 className="text-white font-bold text-lg mb-5">
               {editing ? '✏️ Editar Material' : '+ Nuevo Material'}
@@ -410,7 +449,57 @@ export default function CatalogoPage() {
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
-              {/* Search Query — campo clave para el scraper */}
+              {/* ── NUEVO: Origen del precio ────────────────────────────────── */}
+              <div className="col-span-2">
+                <label className="text-gray-400 text-xs mb-1 block">
+                  Origen del Precio *
+                  <span className="text-gray-600 ml-2 font-normal">
+                    (define cómo el RPA obtiene el precio de este material)
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PRECIO_SOURCE_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setForm({ ...form, precio_source: opt.value })}
+                      className={`text-left px-3 py-2 rounded-lg border text-xs transition-colors ${
+                        form.precio_source === opt.value
+                          ? 'border-[#C9A84C] bg-[#C9A84C]/10 text-white'
+                          : 'border-[#333] bg-[#252525] text-gray-400 hover:border-[#555]'
+                      }`}>
+                      <span className={`font-bold block ${opt.color}`}>
+                        {opt.value.toUpperCase()}
+                      </span>
+                      <span className="text-gray-500 text-[10px]">
+                        {opt.label.split('—')[1]?.trim()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {/* Hint contextual según el source seleccionado */}
+                {form.precio_source === 'fixed' && (
+                  <p className="text-blue-400 text-[11px] mt-1">
+                    💡 El RPA usará el Precio Base de este registro. Asegúrate de que sea correcto.
+                  </p>
+                )}
+                {form.precio_source === 'manual' && (
+                  <p className="text-yellow-400 text-[11px] mt-1">
+                    💡 El usuario ingresa el precio al crear el material en el proyecto.
+                  </p>
+                )}
+                {form.precio_source === 'serpapi' && (
+                  <p className="text-green-400 text-[11px] mt-1">
+                    💡 El RPA consultará Google Shopping. Usa Search Query para mayor precisión.
+                  </p>
+                )}
+                {form.precio_source === 'scrapingbee' && (
+                  <p className="text-purple-400 text-[11px] mt-1">
+                    💡 Scraping directo al sitio de la tienda. Requiere SCRAPINGBEE_ENABLED=true en Railway.
+                  </p>
+                )}
+              </div>
+
+              {/* Search Query */}
               <div className="col-span-2">
                 <label className="text-gray-400 text-xs mb-1 block">
                   Search Query
@@ -439,11 +528,18 @@ export default function CatalogoPage() {
 
               {/* Precio Base */}
               <div>
-                <label className="text-gray-400 text-xs mb-1 block">Precio Base (USD)</label>
+                <label className="text-gray-400 text-xs mb-1 block">
+                  Precio Base (USD)
+                  {form.precio_source === 'fixed' && (
+                    <span className="text-blue-400 ml-1 font-normal">← requerido para FIXED</span>
+                  )}
+                </label>
                 <input type="number" step="0.01" min="0"
                   value={form.precio_base}
                   onChange={e => setForm({ ...form, precio_base: parseFloat(e.target.value) || 0 })}
-                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
+                  className={`w-full bg-[#252525] text-white border rounded-lg px-3 py-2 text-sm ${
+                    form.precio_source === 'fixed' ? 'border-blue-600' : 'border-[#333]'
+                  }`} />
               </div>
 
               {/* Desperdicio */}
