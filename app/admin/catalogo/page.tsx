@@ -247,6 +247,9 @@ export default function CatalogoPage() {
           <span className="text-white font-bold text-sm">ATLANTIC SERVICES — Catálogo</span>
         </div>
         <div className="flex items-center gap-4">
+          // Agregar ANTES del botón de Tiendas:
+          <button onClick={() => router.push('/admin/catalogo/divisiones')}
+            className="text-gray-400 hover:text-[#C9A84C] text-xs transition-colors">🏗 Divisiones</button>
           <button onClick={() => router.push('/admin/catalogo/tiendas')}
             className="text-gray-400 hover:text-[#C9A84C] text-xs transition-colors">🏪 Tiendas</button>
           <button onClick={() => router.push('/admin/catalogo/categorias')}

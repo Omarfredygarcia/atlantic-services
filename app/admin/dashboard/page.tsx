@@ -65,7 +65,6 @@ function ModalRentabilidad({
 
   useEffect(() => { cargarStats() }, [])
 
-  // Cargar Chart.js desde CDN una sola vez
   useEffect(() => {
     if (typeof window !== 'undefined' && !(window as unknown as Record<string, unknown>).Chart) {
       const script = document.createElement('script')
@@ -102,7 +101,6 @@ function ModalRentabilidad({
           porTienda[t] = (porTienda[t] || 0) + 1
         })
 
-      // Materiales agrupados por proyecto para la gráfica de barras
       const matsPorProyecto: Record<string, { mat: number; mo: number; code: string }> = {}
       proyectos.forEach(p => {
         matsPorProyecto[p.id] = { mat: 0, mo: 0, code: p.project_code }
@@ -142,7 +140,6 @@ function ModalRentabilidad({
     } | undefined
     if (!Chart) return
 
-    // ── Gráfica barras apiladas ──────────────────────────────────────────────
     if (barCanvasRef.current) {
       if (barChartRef.current) (barChartRef.current as { destroy: () => void }).destroy()
       const topProjs = Object.entries(s.matsPorProyecto)
@@ -200,7 +197,6 @@ function ModalRentabilidad({
       })
     }
 
-    // ── Donut categorías ─────────────────────────────────────────────────────
     if (donutCanvasRef.current) {
       if (donutChartRef.current) (donutChartRef.current as { destroy: () => void }).destroy()
       const sorted = Object.entries(s.porCategoria)
@@ -286,7 +282,6 @@ function ModalRentabilidad({
     .sort((a, b) => b[1] - a[1])
   const totalTiendas = topTiendas.reduce((s, [, v]) => s + v, 0) || 1
 
-  // Proyectos recientes para la tabla
   const proyectosRecientes = proyectos.slice(0, 6)
 
   return (
@@ -299,17 +294,15 @@ function ModalRentabilidad({
         className="relative w-full mx-4 rounded-2xl border border-[#333] overflow-hidden"
         style={{ maxWidth: '1080px', background: '#141414' }}
       >
-        {/* ── Header ──────────────────────────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-6 py-4 border-b border-[#333]"
           style={{ background: '#1C1C1C' }}
         >
           <div>
             <h2 className="text-white font-bold text-lg">📊 Tablero de Rentabilidad</h2>
-            <p className="text-gray-400 text-sm mt-0.5">Atlantic Services LLC · Motor RPA v2.1</p>
+            <p className="text-gray-400 text-sm mt-0.5">Atlantic Services LLC · Motor RPA v2.3</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Filtros */}
             {(['all', '30', '7'] as const).map(f => (
               <button
                 key={f}
@@ -342,7 +335,6 @@ function ModalRentabilidad({
             </div>
           ) : stats ? (
             <>
-              {/* ── KPIs ────────────────────────────────────────────────── */}
               <div className="grid grid-cols-4 gap-3 mb-5">
                 {[
                   {
@@ -386,7 +378,6 @@ function ModalRentabilidad({
                 ))}
               </div>
 
-              {/* ── Banner automatización ────────────────────────────────── */}
               <div
                 className="rounded-xl border border-green-900 mb-5 p-4"
                 style={{ background: 'rgba(34,197,94,0.06)' }}
@@ -419,9 +410,7 @@ function ModalRentabilidad({
                 </div>
               </div>
 
-              {/* ── Fila 1: Barras apiladas + Donut ─────────────────────── */}
               <div className="grid grid-cols-2 gap-4 mb-4">
-                {/* Barras apiladas por proyecto */}
                 <div className="rounded-xl border border-[#333] p-4" style={{ background: '#1C1C1C' }}>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
@@ -443,7 +432,6 @@ function ModalRentabilidad({
                   </div>
                 </div>
 
-                {/* Donut categorías */}
                 <div className="rounded-xl border border-[#333] p-4" style={{ background: '#1C1C1C' }}>
                   <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-3">
                     Distribución por categoría
@@ -460,9 +448,7 @@ function ModalRentabilidad({
                 </div>
               </div>
 
-              {/* ── Fila 2: Barras categorías + Barras tiendas ──────────── */}
               <div className="grid grid-cols-2 gap-4 mb-4">
-                {/* Por categoría */}
                 <div className="rounded-xl border border-[#333] p-4" style={{ background: '#1C1C1C' }}>
                   <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">
                     Costo por categoría
@@ -489,7 +475,6 @@ function ModalRentabilidad({
                   )}
                 </div>
 
-                {/* Por tienda */}
                 <div className="rounded-xl border border-[#333] p-4" style={{ background: '#1C1C1C' }}>
                   <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">
                     Precios elegidos por tienda
@@ -526,7 +511,6 @@ function ModalRentabilidad({
                 </div>
               </div>
 
-              {/* ── Tabla proyectos recientes ────────────────────────────── */}
               <div className="rounded-xl border border-[#333] mb-4 overflow-hidden" style={{ background: '#1C1C1C' }}>
                 <div className="px-4 py-3 border-b border-[#333]">
                   <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">
@@ -590,7 +574,6 @@ function ModalRentabilidad({
                 </table>
               </div>
 
-              {/* ── Panel envío email ────────────────────────────────────── */}
               <div
                 className="rounded-xl border border-[#2a2a2a] p-4"
                 style={{ background: '#1C1C1C' }}
@@ -932,6 +915,7 @@ export default function DashboardPage() {
                   <td className="px-4 py-3 text-gray-400 text-xs">
                     {p.fecha_hora_proceso ? new Date(p.fecha_hora_proceso).toLocaleString() : '—'}
                   </td>
+                  {/* ── Acciones ─────────────────────────────────────────── */}
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <div className="flex gap-2 flex-wrap">
                       <button
@@ -940,6 +924,7 @@ export default function DashboardPage() {
                       >
                         Editar
                       </button>
+
                       {p.estado === 'COTIZADO' && (
                         <button
                           onClick={() => enviarAlCliente(p.id, p.cliente_email)}
@@ -949,6 +934,18 @@ export default function DashboardPage() {
                           {enviandoId === p.id ? '⏳' : '📧 Enviar'}
                         </button>
                       )}
+
+                      {/* ── Botón PDF — visible si pdf_path existe ──────── */}
+                      {p.pdf_path && (
+                        <button
+                          onClick={() => window.open(`/api/proyectos/${p.id}/pdf`, '_blank')}
+                          className="bg-red-800 hover:bg-red-700 text-white text-xs px-3 py-1 rounded transition-colors"
+                        >
+                          ↓ PDF
+                        </button>
+                      )}
+
+                      {/* ── Botón Excel — visible si excel_path existe ──── */}
                       {p.excel_path && (
                         <button
                           onClick={() => window.open(`/api/proyectos/${p.id}/excel`, '_blank')}
@@ -957,6 +954,7 @@ export default function DashboardPage() {
                           ↓ Excel
                         </button>
                       )}
+
                       {(['COTIZADO', 'ENVIADO', 'COMPLETADO', 'ERROR'] as EstadoProyecto[]).includes(p.estado) && (
                         <button
                           onClick={() => resetearProyecto(p.id)}
