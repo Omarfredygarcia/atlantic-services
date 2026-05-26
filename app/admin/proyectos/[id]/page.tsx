@@ -45,26 +45,22 @@ function MaterialRow({
   onUpdate: (field: string, val: string | number | null) => void
   onDelete: () => void
 }) {
-  // Materiales disponibles según la categoría seleccionada
   const materialesFiltrados = catalogo.filter(
     c => c.categoria_id === mat.categoria_id
   )
-
-  // Item seleccionado del catálogo
   const itemSeleccionado = catalogo.find(c => c.id === mat.catalogo_id)
 
   function handleCategoriaChange(categoriaId: string) {
     const cat = categorias.find(c => c.id === categoriaId)
-    onUpdate('categoria_id', categoriaId)
-    onUpdate('categoria',    cat?.nombre || '')
-    // Limpiar material al cambiar categoría
-    onUpdate('catalogo_id',    null)
-    onUpdate('material',       '')
-    onUpdate('tienda_id',      null)
+    onUpdate('categoria_id',    categoriaId)
+    onUpdate('categoria',       cat?.nombre || '')
+    onUpdate('catalogo_id',     null)
+    onUpdate('material',        '')
+    onUpdate('tienda_id',       null)
     onUpdate('tienda_preferida','')
-    onUpdate('unidad_id',      null)
-    onUpdate('unidad',         '')
-    onUpdate('search_query',   '')
+    onUpdate('unidad_id',       null)
+    onUpdate('unidad',          '')
+    onUpdate('search_query',    '')
     onUpdate('desperdicio_pct', '')
     onUpdate('mano_obra_pct',   '')
   }
@@ -72,8 +68,6 @@ function MaterialRow({
   function handleMaterialChange(catalogoId: string) {
     const item = catalogo.find(c => c.id === catalogoId)
     if (!item) return
-
-    // Heredar todos los campos del catálogo
     onUpdate('catalogo_id',     item.id)
     onUpdate('material',        item.material)
     onUpdate('tienda_id',       item.tienda_id)
@@ -85,17 +79,14 @@ function MaterialRow({
     onUpdate('mano_obra_pct',   item.mano_obra_pct)
   }
 
-  // Precio base a mostrar
   const precioBase = itemSeleccionado?.precio_source === 'fixed'
     ? itemSeleccionado?.precio_base_usd || itemSeleccionado?.precio_base
     : itemSeleccionado?.precio_base
 
   return (
     <tr className="border-t border-[#333]">
-      {/* # */}
       <td className="px-3 py-2 text-gray-400 text-sm text-center">{mat.linea}</td>
 
-      {/* Categoría */}
       <td className="px-3 py-2">
         <select
           value={mat.categoria_id || ''}
@@ -109,7 +100,6 @@ function MaterialRow({
         </select>
       </td>
 
-      {/* Material */}
       <td className="px-3 py-2">
         <select
           value={mat.catalogo_id || ''}
@@ -124,7 +114,6 @@ function MaterialRow({
         </select>
       </td>
 
-      {/* Área / Cantidad */}
       <td className="px-3 py-2">
         <div className="flex items-center gap-1">
           <input
@@ -141,32 +130,24 @@ function MaterialRow({
         </div>
       </td>
 
-      {/* Tienda */}
-      <td className="px-3 py-2 text-gray-400 text-xs">
-        {mat.tienda_preferida || '—'}
-      </td>
+      <td className="px-3 py-2 text-gray-400 text-xs">{mat.tienda_preferida || '—'}</td>
 
-      {/* Precio source badge */}
       <td className="px-3 py-2 text-center">
         <PrecioSourceBadge source={itemSeleccionado?.precio_source} />
       </td>
 
-      {/* Precio base catálogo */}
       <td className="px-3 py-2 text-gray-400 text-sm text-right">
         {precioBase ? `$${Number(precioBase).toFixed(2)}` : '—'}
       </td>
 
-      {/* Precio calculado RPA */}
       <td className="px-3 py-2 text-green-400 text-sm text-right">
         {mat.precio_unitario ? `$${mat.precio_unitario.toFixed(2)}` : '—'}
       </td>
 
-      {/* Costo total */}
       <td className="px-3 py-2 text-green-400 text-sm text-right font-medium">
         {mat.costo_material ? `$${mat.costo_material.toFixed(2)}` : '—'}
       </td>
 
-      {/* Precio manual — solo visible si precio_source = manual */}
       {itemSeleccionado?.precio_source === 'manual' && (
         <td className="px-3 py-2">
           <input
@@ -181,7 +162,6 @@ function MaterialRow({
         </td>
       )}
 
-      {/* Eliminar */}
       <td className="px-3 py-2 text-center">
         <button
           onClick={onDelete}
@@ -206,13 +186,11 @@ export default function ProyectoFormPage() {
     fecha_creacion: new Date().toISOString().split('T')[0],
   })
   const [materiales, setMateriales] = useState<Partial<Material>[]>([])
-
   const [catalogo,   setCatalogo]   = useState<CatalogoItem[]>([])
   const [categorias, setCategorias] = useState<CategoriaRef[]>([])
-
-  const [loading,   setLoading]   = useState(false)
-  const [guardando, setGuardando] = useState(false)
-  const [msg,       setMsg]       = useState('')
+  const [loading,    setLoading]    = useState(false)
+  const [guardando,  setGuardando]  = useState(false)
+  const [msg,        setMsg]        = useState('')
 
   useEffect(() => {
     cargarReferencias()
@@ -222,50 +200,57 @@ export default function ProyectoFormPage() {
   async function cargarReferencias() {
     const supabase = createClient()
 
-    // Catálogo con JOIN completo
-    const { data: catData } = await supabase
+    // ── FIX: csi_division y csi_nombre ya no existen en categorias
+    // El JOIN ahora es: categorias → divisiones (division_id FK)
+    // Solo pedimos id y nombre de categorias — sin columnas CSI eliminadas
+    const { data: catData, error: catError } = await supabase
       .from('catalogo')
       .select(`
         *,
-        categorias(id, nombre, csi_division, csi_nombre),
+        categorias(id, nombre),
         tiendas(id, nombre),
         unidades(id, codigo, descripcion)
       `)
       .eq('activo', true)
       .order('material')
 
+    if (catError) {
+      console.error('Error cargando catálogo:', catError.message)
+    }
+
     if (catData) {
       const items: CatalogoItem[] = catData.map((item: any) => ({
         ...item,
-        categoria_nombre: item.categorias?.nombre  || '',
-        tienda_nombre:    item.tiendas?.nombre     || '',
-        unidad_codigo:    item.unidades?.codigo    || '',
-        unidad_desc:      item.unidades?.descripcion || '',
+        categoria_nombre: item.categorias?.nombre     || '',
+        tienda_nombre:    item.tiendas?.nombre        || '',
+        unidad_codigo:    item.unidades?.codigo       || '',
+        unidad_desc:      item.unidades?.descripcion  || '',
       }))
       setCatalogo(items)
     }
 
-    // Categorías activas
-    const { data: cats } = await supabase
+    // ── FIX: categorias sin csi_division/csi_nombre — solo id y nombre
+    const { data: cats, error: catsError } = await supabase
       .from('categorias')
-      .select('id, nombre, csi_division, csi_nombre')
+      .select('id, nombre')
       .eq('activo', true)
       .order('nombre')
+
+    if (catsError) {
+      console.error('Error cargando categorías:', catsError.message)
+    }
     if (cats) setCategorias(cats)
   }
 
   async function cargarProyecto() {
     setLoading(true)
     const supabase = createClient()
-
     const { data: proy } = await supabase
       .from('proyectos').select('*').eq('id', params.id).single()
     if (proy) setProyecto(proy)
-
     const { data: mats } = await supabase
       .from('materiales').select('*').eq('proyecto_id', params.id).order('linea')
     if (mats) setMateriales(mats)
-
     setLoading(false)
   }
 
@@ -318,19 +303,16 @@ export default function ProyectoFormPage() {
         if (error) throw error
         proyectoId = data.id
 
-        // Insertar materiales válidos con todos los FKs
         const matsValidos = materiales.filter(m => m.catalogo_id && m.categoria_id)
         if (matsValidos.length > 0) {
           const { error: matError } = await supabase.from('materiales').insert(
             matsValidos.map(m => ({
               proyecto_id:      proyectoId,
               linea:            m.linea,
-              // FKs v21
               catalogo_id:      m.catalogo_id,
               categoria_id:     m.categoria_id,
               tienda_id:        m.tienda_id,
               unidad_id:        m.unidad_id,
-              // Snapshot texto (para historial y RPA fallback)
               categoria:        m.categoria,
               material:         m.material,
               area_ft2:         m.area_ft2 || 0,
@@ -339,7 +321,6 @@ export default function ProyectoFormPage() {
               search_query:     m.search_query,
               desperdicio_pct:  m.desperdicio_pct,
               mano_obra_pct:    m.mano_obra_pct,
-              // Precio manual si aplica
               precio_unitario:  m.precio_unitario || null,
             }))
           )
@@ -350,7 +331,6 @@ export default function ProyectoFormPage() {
         setTimeout(() => router.push('/admin/dashboard'), 2000)
 
       } else {
-        // Actualizar proyecto
         const { error } = await supabase.from('proyectos').update({
           cliente_nombre:   proyecto.cliente_nombre,
           cliente_email:    proyecto.cliente_email,
@@ -363,7 +343,6 @@ export default function ProyectoFormPage() {
 
         if (error) throw error
 
-        // Actualizar materiales — borrar y reinsertar
         await supabase.from('materiales').delete().eq('proyecto_id', proyectoId)
 
         const matsValidos = materiales.filter(m => m.catalogo_id && m.categoria_id)
@@ -412,7 +391,6 @@ export default function ProyectoFormPage() {
     cargarProyecto()
   }
 
-  // ── Totales en tiempo real ─────────────────────────────────────────────────
   const totalMateriales = materiales.reduce((s, m) => s + (m.costo_material || 0), 0)
   const totalManoObra   = materiales.reduce((s, m) => s + (m.costo_mano_obra || 0), 0)
   const totalProyecto   = totalMateriales + totalManoObra
@@ -425,7 +403,6 @@ export default function ProyectoFormPage() {
 
   return (
     <div className="min-h-screen bg-[#141414]">
-      {/* Navbar */}
       <nav className="bg-[#1C1C1C] border-b border-[#333] px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-[#C9A84C] text-xl">⬡</span>
@@ -561,7 +538,6 @@ export default function ProyectoFormPage() {
             </table>
           </div>
 
-          {/* Totales en tiempo real (post-RPA) */}
           {totalProyecto > 0 && (
             <div className="mt-4 flex justify-end gap-6 text-sm">
               <span className="text-gray-400">
@@ -577,7 +553,6 @@ export default function ProyectoFormPage() {
           )}
         </div>
 
-        {/* Mensaje */}
         {msg && (
           <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-medium ${
             msg.startsWith('✅')
@@ -588,7 +563,6 @@ export default function ProyectoFormPage() {
           </div>
         )}
 
-        {/* Botones */}
         <div className="flex gap-3">
           <button
             onClick={guardar}
