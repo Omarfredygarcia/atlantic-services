@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase-client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,10 +43,8 @@ type ScraperResult = {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const RAILWAY_BASE = process.env.NEXT_PUBLIC_RAILWAY_RPA_URL || "";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+const supabase = createClient();
 
 /** Construye la URL de búsqueda según el dominio de la tienda */
 function buildSearchUrl(tiendaUrl: string | null, term: string): string {
