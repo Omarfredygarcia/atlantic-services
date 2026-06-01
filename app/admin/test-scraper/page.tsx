@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-client";
 
+// Instancia al nivel de módulo — igual que en el resto de la app
+const supabase = createClient();
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Tienda = {
@@ -37,122 +40,126 @@ type ScraperResult = {
   html_length?: number;
   search_term_present?: boolean;
   results_match?: boolean;
-  first_product_match?: boolean;
   price_context?: string;
   message?: string;
   error?: string | null;
 };
 
-// ─── Tiendas ScrapingBee (contrato Cláusula 2) ───────────────────────────────
-// Solo estas van al sandbox — SerpApi (HomeDepot, Lowes, etc.) ya funciona en el motor
+// ─── Tiendas ScrapingBee según Cláusula 2 del contrato ───────────────────────
+// SerpApi: Home Depot, Lowe's, ABC Supply, Builders FirstSource, ICC Floors Plus
+// ScrapingBee: Menards, Floor & Decor (+ tiendas locales sin soporte SerpApi)
 
-const SCRAPING_BEE_DOMAINS = ["menards.com", "flooranddecor.com"];
+const SB_DOMAINS = ["menards.com", "flooranddecor.com", "richardssupply.com"];
 
-function buildSearchUrl(tiendaUrl: string | null, term: string): string {
-  if (!tiendaUrl || !term.trim()) return tiendaUrl ?? "";
-  const t = term.trim();
-  try {
-    const host = new URL(tiendaUrl).hostname.replace("www.", "");
-    if (host.includes("menards.com"))
-      return `https://www.menards.com/main/search.html?search=${encodeURIComponent(t)}`;
-    if (host.includes("flooranddecor.com"))
-      return `https://www.flooranddecor.com/search?q=${encodeURIComponent(t)}`;
-    return `${tiendaUrl}?q=${encodeURIComponent(t)}`;
-  } catch {
-    return tiendaUrl;
-  }
-}
-
-function isScrapingBeeTienda(url: string | null): boolean {
+function isScrapingBee(url: string | null): boolean {
   if (!url) return false;
   try {
     const host = new URL(url).hostname.replace("www.", "");
-    return SCRAPING_BEE_DOMAINS.some((d) => host.includes(d));
+    return SB_DOMAINS.some((d) => host.includes(d));
   } catch { return false; }
+}
+
+function buildSearchUrl(tiendaUrl: string | null, term: string): string {
+  if (!tiendaUrl || !term.trim()) return tiendaUrl ?? "";
+  const t = encodeURIComponent(term.trim());
+  try {
+    const host = new URL(tiendaUrl).hostname.replace("www.", "");
+    if (host.includes("menards.com"))
+      return `https://www.menards.com/main/search.html?search=${t}`;
+    if (host.includes("flooranddecor.com"))
+      return `https://www.flooranddecor.com/search?q=${t}`;
+    if (host.includes("richardssupply.com"))
+      return `https://www.richardssupply.com/search?q=${t}`;
+    return `${tiendaUrl}?q=${t}`;
+  } catch { return tiendaUrl; }
 }
 
 function estrategiaLabel(s?: string) {
   const map: Record<string, string> = {
-    "edlp": "EDLP — precio oficial",
-    "json-ld": "JSON-LD — datos estructurados",
+    "edlp":                  "EDLP — precio oficial",
+    "json-ld":               "JSON-LD — datos estructurados",
     "fallback-primer-dolar": "Fallback $ — menos confiable",
   };
   return s ? (map[s] ?? s) : "—";
 }
 
-function scoreColor(score?: number | null) {
-  if (score == null) return "#94a3b8";
-  if (score >= 5) return "#4ade80";
-  if (score >= 3) return "#fbbf24";
-  return "#f87171";
+function scoreColor(n?: number | null) {
+  if (n == null) return "#94a3b8";
+  return n >= 5 ? "#4ade80" : n >= 3 ? "#fbbf24" : "#f87171";
 }
-
-function scoreLabel(score?: number | null) {
-  if (score == null) return "";
-  if (score >= 5) return "✓ Confiable";
-  if (score >= 3) return "~ Aceptable";
-  return "⚠ Posible error";
+function scoreLabel(n?: number | null) {
+  if (n == null) return "";
+  return n >= 5 ? "✓ Confiable" : n >= 3 ? "~ Aceptable" : "⚠ Posible error";
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function TestScraperPage() {
-  const [tiendas, setTiendas]         = useState<Tienda[]>([]);
-  const [catalogo, setCatalogo]       = useState<CatalogoItem[]>([]);
-  const [tiendaId, setTiendaId]       = useState("");
-  const [materialId, setMaterialId]   = useState("");
-  const [term, setTerm]               = useState("");
-  const [searchUrl, setSearchUrl]     = useState("");
-  const [result, setResult]           = useState<ScraperResult | null>(null);
-  const [loading, setLoading]         = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
-  const [dbError, setDbError]         = useState<string | null>(null);
+  const [todasTiendas, setTodasTiendas] = useState<Tienda[]>([]);
+  const [tiendas, setTiendas]           = useState<Tienda[]>([]);
+  const [catalogo, setCatalogo]         = useState<CatalogoItem[]>([]);
+  const [tiendaId, setTiendaId]         = useState("");
+  const [materialId, setMaterialId]     = useState("");
+  const [term, setTerm]                 = useState("");
+  const [searchUrl, setSearchUrl]       = useState("");
+  const [result, setResult]             = useState<ScraperResult | null>(null);
+  const [loading, setLoading]           = useState(false);
+  const [loadingData, setLoadingData]   = useState(true);
+  const [dbError, setDbError]           = useState<string | null>(null);
+  const [dbRaw, setDbRaw]               = useState<string>("");   // debug: qué llegó de BD
 
   const RAILWAY_BASE = process.env.NEXT_PUBLIC_RAILWAY_RPA_URL ?? "";
 
-  // ── Carga TODAS las tiendas activas, filtra en cliente las de ScrapingBee
+  // ── Carga tiendas
   useEffect(() => {
-    const supabase = createClient();
     async function load() {
-      setLoadingData(true);
       const { data, error } = await supabase
         .from("tiendas")
         .select("id, nombre, url, activo")
         .eq("activo", true)
         .order("nombre");
-      if (error) { setDbError(error.message); setLoadingData(false); return; }
-      const filtradas = (data ?? []).filter((t) => isScrapingBeeTienda(t.url));
-      setTiendas(filtradas);
+
+      if (error) {
+        setDbError(error.message);
+        setLoadingData(false);
+        return;
+      }
+
+      const raw = data ?? [];
+      setTodasTiendas(raw);
+      setDbRaw(`${raw.length} tiendas en BD: ${raw.map(t => t.url ?? "null").join(", ")}`);
+
+      const sb = raw.filter((t) => isScrapingBee(t.url));
+      setTiendas(sb);
       setLoadingData(false);
     }
     load();
   }, []);
 
-  // ── Catálogo por tienda — filtra solo materiales scrapingbee
+  // ── Catálogo por tienda
   useEffect(() => {
     if (!tiendaId) { setCatalogo([]); setMaterialId(""); return; }
-    const supabase = createClient();
     async function load() {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("catalogo")
         .select("id, material, search_query, precio_source, tienda_id")
         .eq("tienda_id", tiendaId)
         .eq("activo", true)
         .order("material");
-      if (!error && data) setCatalogo(data);
+      setCatalogo(data ?? []);
       setMaterialId(""); setTerm(""); setSearchUrl("");
     }
     load();
   }, [tiendaId]);
 
-  // ── Pre-carga search_query al seleccionar material
+  // ── Pre-carga search_query
   useEffect(() => {
     const item = catalogo.find((c) => c.id === materialId);
     if (!item) return;
     const sq = item.search_query ?? "";
     setTerm(sq);
-    const tienda = tiendas.find((t) => t.id === tiendaId);
-    setSearchUrl(buildSearchUrl(tienda?.url ?? null, sq));
+    const t = tiendas.find((t) => t.id === tiendaId);
+    setSearchUrl(buildSearchUrl(t?.url ?? null, sq));
   }, [materialId]);
 
   const tiendaActual   = tiendas.find((t) => t.id === tiendaId);
@@ -177,183 +184,162 @@ export default function TestScraperPage() {
 
   const precioFmt = result?.precio != null ? `$${result.precio.toFixed(2)}` : null;
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <main style={styles.page}>
+    <main style={S.page}>
+
       {/* Header */}
-      <div style={styles.header}>
+      <div style={S.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={styles.dot} />
-          <span style={styles.headerSub}>Atlantic Services · Scraper Sandbox · ScrapingBee</span>
+          <div style={S.led} />
+          <span style={S.headerSub}>Atlantic Services · Scraper Sandbox · ScrapingBee</span>
         </div>
-        <h1 style={styles.h1}>Test Scraper de Precios</h1>
-        <p style={styles.headerDesc}>
-          Herramienta de validación para las tiendas que usan ScrapingBee —
-          <strong style={{ color: "#93c5fd" }}> Menards</strong> y
-          <strong style={{ color: "#93c5fd" }}> Floor & Decor</strong>.
-          SerpApi (Home Depot, Lowe's, etc.) ya opera en el motor principal.
+        <h1 style={S.h1}>Test Scraper de Precios</h1>
+        <p style={S.headerDesc}>
+          Sandbox exclusivo para tiendas <strong style={{ color: "#93c5fd" }}>ScrapingBee</strong>:
+          Menards, Floor & Decor, Richard's Supply.
+          Las tiendas SerpApi (Home Depot, Lowe's…) operan directo en el motor.
         </p>
       </div>
 
+      {/* Error Supabase */}
       {dbError && (
-        <div style={styles.errorBanner}>
-          ⛔ Error conectando a Supabase: {dbError}
+        <div style={S.errorBanner}>
+          ⛔ <strong>Error Supabase:</strong> {dbError}
         </div>
       )}
 
-      <div style={styles.grid}>
+      {/* Debug — visible mientras se resuelve el problema de tiendas */}
+      {!loadingData && (
+        <div style={S.debugBanner}>
+          🔍 <strong>Debug BD:</strong> {dbRaw || "(sin datos)"}
+          {todasTiendas.length > 0 && tiendas.length === 0 && (
+            <span style={{ color: "#f87171", marginLeft: 12 }}>
+              ← Hay {todasTiendas.length} tiendas en BD pero ninguna tiene URL de Menards / Floor & Decor / Richard's Supply.
+              Verifica que las URLs incluyan el dominio correcto (ej: https://menards.com).
+            </span>
+          )}
+        </div>
+      )}
 
-        {/* ── Panel izquierdo ── */}
-        <div style={styles.panel}>
+      <div style={S.grid}>
 
-          {/* Tienda */}
+        {/* Panel izquierdo */}
+        <div style={S.leftPanel}>
+
           <Field label="Tienda" color="#60a5fa">
-            {loadingData ? (
-              <div style={styles.skeleton} />
-            ) : tiendas.length === 0 ? (
-              <div style={styles.emptyMsg}>
-                {dbError ? "Error de conexión ↑" : "No hay tiendas ScrapingBee activas en la BD.\nVerifica que Menards / Floor & Decor estén en la tabla tiendas con activo=true."}
+            {loadingData ? <Skeleton /> : tiendas.length === 0 ? (
+              <div style={S.emptyMsg}>
+                {dbError
+                  ? "Error de conexión — ver banner arriba."
+                  : "No se encontraron tiendas ScrapingBee activas.\nVer debug arriba para más detalle."}
               </div>
             ) : (
-              <select
-                style={styles.select}
-                value={tiendaId}
-                onChange={(e) => { setTiendaId(e.target.value); setResult(null); }}
-              >
+              <select style={S.select} value={tiendaId}
+                onChange={(e) => { setTiendaId(e.target.value); setResult(null); }}>
                 <option value="">— seleccionar tienda —</option>
-                {tiendas.map((t) => (
-                  <option key={t.id} value={t.id}>{t.nombre}</option>
-                ))}
+                {tiendas.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
               </select>
             )}
-            {tiendaActual?.url && (
-              <div style={styles.hint}>{tiendaActual.url}</div>
-            )}
+            {tiendaActual?.url && <div style={S.hint}>{tiendaActual.url}</div>}
           </Field>
 
-          {/* Material */}
           <Field label="Material del catálogo" color="#a78bfa">
-            <select
-              style={{ ...styles.select, opacity: !tiendaId ? 0.45 : 1 }}
-              value={materialId}
-              disabled={!tiendaId}
-              onChange={(e) => { setMaterialId(e.target.value); setResult(null); }}
-            >
+            <select style={{ ...S.select, opacity: !tiendaId ? 0.4 : 1 }}
+              value={materialId} disabled={!tiendaId}
+              onChange={(e) => { setMaterialId(e.target.value); setResult(null); }}>
               <option value="">— seleccionar material —</option>
-              {catalogo.map((c) => (
-                <option key={c.id} value={c.id}>{c.material}</option>
-              ))}
+              {catalogo.map((c) => <option key={c.id} value={c.id}>{c.material}</option>)}
             </select>
             {materialActual && (
-              <div style={styles.hint}>
+              <div style={S.hint}>
                 precio_source: <span style={{ color: "#fbbf24" }}>{materialActual.precio_source}</span>
-                {materialActual.precio_source !== "scrapingbee" && (
-                  <span style={{ color: "#f87171", marginLeft: 8 }}>⚠ no es scrapingbee</span>
-                )}
+                {materialActual.precio_source !== "scrapingbee" &&
+                  <span style={{ color: "#f87171", marginLeft: 8 }}>⚠ no es scrapingbee</span>}
               </div>
             )}
           </Field>
 
-          {/* Search query */}
           <Field label="Search query (editable)" color="#34d399">
-            <input
-              style={styles.input}
-              value={term}
+            <input style={S.input} value={term}
               onChange={(e) => handleTermChange(e.target.value)}
-              placeholder="ej: Charlotte Pipe 4 in x 10 ft PVC Sewer Drain Pipe"
-            />
-            <div style={styles.hint}>Sin comillas, sin símbolos ®™, usar "in" y "ft" en lugar de " y '</div>
+              placeholder="ej: Charlotte Pipe 4 in x 10 ft PVC Sewer Drain Pipe" />
+            <div style={S.hint}>Sin comillas ni ® ™ — usar "in" y "ft" en lugar de " y '</div>
           </Field>
 
-          {/* URL */}
           <Field label="URL de búsqueda (editable)" color="#fb923c">
-            <textarea
-              style={{ ...styles.input, resize: "vertical", minHeight: 72, fontSize: 13, lineHeight: 1.55 }}
-              value={searchUrl}
-              onChange={(e) => setSearchUrl(e.target.value)}
-              placeholder="Se construye automáticamente al seleccionar tienda + material"
-            />
-            <div style={styles.hint}>Editable — pega una URL directa de producto para hacer 1 sola llamada</div>
+            <textarea style={{ ...S.input, resize: "vertical", minHeight: 76, fontSize: 13, lineHeight: 1.55 }}
+              value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)}
+              placeholder="Se construye automáticamente al seleccionar tienda + material" />
+            <div style={S.hint}>Pega URL directa de producto para 1 sola llamada ScrapingBee</div>
           </Field>
 
-          {/* Botones */}
           <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-            <button style={styles.btnDisabled} disabled>
+            <button style={S.btnOff} disabled>
               🎭 Playwright
-              <span style={styles.pronto}>PRONTO</span>
+              <span style={S.pronto}>PRONTO</span>
             </button>
             <button
-              style={{
-                ...styles.btn,
-                opacity: !searchUrl || loading ? 0.5 : 1,
-                cursor: !searchUrl || loading ? "not-allowed" : "pointer",
-              }}
-              disabled={!searchUrl || loading}
-              onClick={run}
-            >
+              style={{ ...S.btn, opacity: !searchUrl || loading ? 0.5 : 1, cursor: !searchUrl || loading ? "not-allowed" : "pointer" }}
+              disabled={!searchUrl || loading} onClick={run}>
               {loading
-                ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Spin />Consultando…</span>
-                : "🐝 Probar ScrapingBee"
-              }
+                ? <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}><Spin />Consultando…</span>
+                : "🐝 Probar ScrapingBee"}
             </button>
           </div>
 
-          {/* Credits reminder */}
-          <div style={styles.creditBox}>
+          <div style={S.creditBox}>
             🐝 <strong>Créditos ScrapingBee:</strong> ~525 restantes → ~260 pruebas de 2 llamadas.
             Máx 15 pruebas Menards + 5-10 Floor & Decor antes de ampliar plan.
           </div>
+
         </div>
 
-        {/* ── Panel derecho: resultado ── */}
-        <div style={styles.resultPanel}>
+        {/* Panel derecho */}
+        <div style={S.resultPanel}>
+
           {!result && !loading && (
-            <div style={styles.waitState}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🐝</div>
-              <div style={{ color: "#475569", fontSize: 14 }}>Esperando consulta…</div>
-              <div style={{ color: "#1e3a5f", fontSize: 12, marginTop: 8, maxWidth: 220, textAlign: "center" }}>
+            <div style={S.center}>
+              <div style={{ fontSize: 52, marginBottom: 12 }}>🐝</div>
+              <div style={{ color: "#475569", fontSize: 15 }}>Esperando consulta…</div>
+              <div style={{ color: "#1e3a5f", fontSize: 12, marginTop: 8, textAlign: "center", maxWidth: 220 }}>
                 Selecciona tienda → material → presiona Probar ScrapingBee
               </div>
             </div>
           )}
 
           {loading && (
-            <div style={styles.waitState}>
-              <Spin size={36} />
-              <div style={{ color: "#60a5fa", fontSize: 14, marginTop: 16 }}>Consultando ScrapingBee…</div>
+            <div style={S.center}>
+              <Spin size={40} />
+              <div style={{ color: "#60a5fa", fontSize: 15, marginTop: 18 }}>Consultando ScrapingBee…</div>
               <div style={{ color: "#475569", fontSize: 12, marginTop: 6 }}>~13-15 seg (2 llamadas)</div>
             </div>
           )}
 
           {result && !loading && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 0, height: "100%" }}>
-
+            <>
               {/* Precio hero */}
-              <div style={styles.priceHero}>
+              <div style={S.priceHero}>
                 {result.error ? (
                   <>
-                    <div style={{ fontSize: 40, color: "#f87171" }}>✕</div>
-                    <div style={{ color: "#f87171", fontSize: 14, marginTop: 6 }}>{result.error}</div>
+                    <div style={{ fontSize: 44, color: "#f87171" }}>✕</div>
+                    <div style={{ color: "#f87171", fontSize: 14, marginTop: 8 }}>{result.error}</div>
                   </>
                 ) : (
                   <>
                     <div style={{
-                      fontSize: 56,
-                      fontWeight: 700,
+                      fontSize: 64, fontWeight: 700, lineHeight: 1,
                       color: result.price_found ? "#4ade80" : "#f87171",
                       letterSpacing: "-2px",
-                      lineHeight: 1,
                     }}>
                       {precioFmt ?? (result.price_found ? "?" : "Sin precio")}
                     </div>
                     <div style={{
-                      fontSize: 13,
-                      marginTop: 8,
+                      fontSize: 14, marginTop: 10,
                       color: result.price_strategy === "edlp" ? "#4ade80"
                            : result.price_strategy === "json-ld" ? "#fbbf24"
-                           : result.price_strategy?.startsWith("fallback") ? "#f87171"
-                           : "#64748b",
+                           : "#f87171",
                     }}>
                       {estrategiaLabel(result.price_strategy)}
                     </div>
@@ -361,18 +347,18 @@ export default function TestScraperPage() {
                 )}
               </div>
 
-              {/* Producto encontrado */}
+              {/* Producto seleccionado */}
               {result.product_title && (
-                <div style={styles.productBlock}>
-                  <div style={styles.blockLabel}>Producto seleccionado por el robot</div>
-                  <div style={{ color: "#e2e8f0", fontSize: 14, lineHeight: 1.5, marginBottom: 10 }}>
+                <div style={S.productBlock}>
+                  <div style={S.blockLabel}>Producto seleccionado por el robot</div>
+                  <div style={{ color: "#e2e8f0", fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>
                     {result.product_title}
                   </div>
-                  <div style={{ display: "flex", gap: 24 }}>
+                  <div style={{ display: "flex", gap: 28 }}>
                     {result.match_score != null && (
                       <div>
                         <span style={{ color: "#64748b", fontSize: 12 }}>Match score  </span>
-                        <span style={{ color: scoreColor(result.match_score), fontSize: 16, fontWeight: 700 }}>
+                        <span style={{ color: scoreColor(result.match_score), fontSize: 22, fontWeight: 700 }}>
                           {result.match_score}
                         </span>
                         <span style={{ color: scoreColor(result.match_score), fontSize: 12, marginLeft: 6 }}>
@@ -382,8 +368,8 @@ export default function TestScraperPage() {
                     )}
                     {result.llamadas_scrapingbee != null && (
                       <div>
-                        <span style={{ color: "#64748b", fontSize: 12 }}>Llamadas  </span>
-                        <span style={{ color: "#94a3b8", fontSize: 16, fontWeight: 700 }}>
+                        <span style={{ color: "#64748b", fontSize: 12 }}>Llamadas SB  </span>
+                        <span style={{ color: "#94a3b8", fontSize: 22, fontWeight: 700 }}>
                           {result.llamadas_scrapingbee}
                         </span>
                       </div>
@@ -393,20 +379,19 @@ export default function TestScraperPage() {
               )}
 
               {/* Diagnóstico */}
-              <div style={styles.diagBlock}>
-                <div style={styles.blockLabel}>Diagnóstico</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={S.diagBlock}>
+                <div style={S.blockLabel}>Diagnóstico</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {([
-                    ["Status",            result.status],
-                    ["Tiempo",            result.tiempo_ms != null ? `${result.tiempo_ms} ms` : null],
-                    ["HTML",              result.html_length != null ? `${result.html_length.toLocaleString()} bytes` : null],
-                    ["Captcha",           result.captcha_detected != null ? (result.captcha_detected ? "⚠️ Detectado" : "✓ Limpio") : null],
-                    ["Término presente",  result.search_term_present != null ? (result.search_term_present ? "✓ Sí" : "✗ No") : null],
-                    ["Resultados OK",     result.results_match != null ? (result.results_match ? "✓ Sí" : "✗ No") : null],
+                    ["Status",           result.status],
+                    ["Tiempo",           result.tiempo_ms != null ? `${result.tiempo_ms} ms` : null],
+                    ["HTML",             result.html_length != null ? `${result.html_length.toLocaleString()} bytes` : null],
+                    ["Captcha",          result.captcha_detected != null ? (result.captcha_detected ? "⚠️ Detectado" : "✓ Limpio") : null],
+                    ["Término presente", result.search_term_present != null ? (result.search_term_present ? "✓ Sí" : "✗ No") : null],
                   ] as [string, string | null | undefined][]).map(([k, v]) =>
                     v != null ? (
-                      <div key={k} style={{ display: "flex", gap: 8 }}>
-                        <span style={{ color: "#64748b", fontSize: 13, minWidth: 140 }}>{k}</span>
+                      <div key={k} style={{ display: "flex", gap: 12 }}>
+                        <span style={{ color: "#64748b", fontSize: 13, minWidth: 148 }}>{k}</span>
                         <span style={{ color: "#cbd5e1", fontSize: 13 }}>{v}</span>
                       </div>
                     ) : null
@@ -414,15 +399,15 @@ export default function TestScraperPage() {
                 </div>
 
                 {result.price_context && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ ...styles.blockLabel, marginBottom: 4 }}>Price context</div>
-                    <div style={styles.codeBox}>{result.price_context}</div>
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ ...S.blockLabel, marginBottom: 6 }}>Price context</div>
+                    <div style={S.codeBox}>{result.price_context}</div>
                   </div>
                 )}
 
                 {(result.product_url ?? result.url) && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ ...styles.blockLabel, marginBottom: 4 }}>URL consultada</div>
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ ...S.blockLabel, marginBottom: 6 }}>URL consultada</div>
                     <a href={result.product_url ?? result.url ?? ""} target="_blank" rel="noreferrer"
                       style={{ fontSize: 12, color: "#60a5fa", wordBreak: "break-all" }}>
                       {result.product_url ?? result.url}
@@ -431,10 +416,10 @@ export default function TestScraperPage() {
                 )}
 
                 {result.message && (
-                  <div style={styles.warnBox}>⚠️ {result.message}</div>
+                  <div style={S.warnBox}>⚠️ {result.message}</div>
                 )}
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -458,13 +443,17 @@ function Field({ label, color, children }: { label: string; color: string; child
   );
 }
 
-function Spin({ size = 20 }: { size?: number }) {
-  return <span style={{ fontSize: size, display: "inline-block", animation: "spin 0.8s linear infinite" }}>⟳</span>;
+function Skeleton() {
+  return <div style={{ height: 44, backgroundColor: "#1e3a5f", borderRadius: 8, opacity: 0.5 }} />;
+}
+
+function Spin({ size = 18 }: { size?: number }) {
+  return <span style={{ fontSize: size, display: "inline-block", animation: "spin 0.8s linear infinite", lineHeight: 1 }}>⟳</span>;
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const base = {
+const base: React.CSSProperties = {
   fontFamily: "'DM Mono', 'Fira Code', monospace",
   fontSize: 14,
   backgroundColor: "#0a1628",
@@ -473,105 +462,35 @@ const base = {
   color: "#e2e8f0",
   padding: "10px 14px",
   width: "100%",
-  boxSizing: "border-box" as const,
+  boxSizing: "border-box",
   outline: "none",
 };
 
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    backgroundColor: "#080f1e",
-    color: "#e2e8f0",
-    fontFamily: "'DM Mono', 'Fira Code', monospace",
-    padding: "2.5rem 2rem",
-  },
-  header: {
-    marginBottom: 32,
-    paddingBottom: 20,
-    borderBottom: "1px solid #1e3a5f",
-  },
-  dot: {
-    width: 12, height: 12, borderRadius: "50%",
-    backgroundColor: "#22c55e", boxShadow: "0 0 10px #22c55e55",
-  },
-  headerSub: { fontSize: 11, color: "#475569", letterSpacing: "0.16em", textTransform: "uppercase" },
-  h1: { fontSize: 28, fontWeight: 700, margin: "8px 0 6px", color: "#f8fafc" },
+const S: Record<string, React.CSSProperties> = {
+  page:       { minHeight: "100vh", backgroundColor: "#080f1e", color: "#e2e8f0", fontFamily: "'DM Mono','Fira Code',monospace", padding: "2.5rem 2rem" },
+  header:     { marginBottom: 28, paddingBottom: 20, borderBottom: "1px solid #1e3a5f" },
+  led:        { width: 12, height: 12, borderRadius: "50%", backgroundColor: "#22c55e", boxShadow: "0 0 10px #22c55e66" },
+  headerSub:  { fontSize: 11, color: "#475569", letterSpacing: "0.16em", textTransform: "uppercase" },
+  h1:         { fontSize: 28, fontWeight: 700, margin: "8px 0 6px", color: "#f8fafc" },
   headerDesc: { fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 },
-  errorBanner: {
-    backgroundColor: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8,
-    padding: "12px 16px", color: "#fca5a5", fontSize: 13, marginBottom: 20,
-  },
-  grid: {
-    display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, maxWidth: 1100,
-  },
-  panel: { display: "flex", flexDirection: "column", gap: 20 },
-  select: { ...base, cursor: "pointer" },
-  input:  { ...base },
-  hint: { fontSize: 11, color: "#475569", marginTop: 2, lineHeight: 1.5 },
-  skeleton: { height: 42, backgroundColor: "#1e3a5f", borderRadius: 8, opacity: 0.5 },
-  emptyMsg: {
-    fontSize: 12, color: "#ef4444", backgroundColor: "#1a0a0a",
-    border: "1px solid #7f1d1d", borderRadius: 8, padding: "10px 14px",
-    lineHeight: 1.6, whiteSpace: "pre-line",
-  },
-  btn: {
-    flex: 1, padding: "12px 16px", borderRadius: 8,
-    fontFamily: "'DM Mono', 'Fira Code', monospace",
-    fontSize: 14, fontWeight: 700, letterSpacing: "0.04em",
-    backgroundColor: "#14532d", color: "#86efac",
-    border: "1px solid #166534", cursor: "pointer",
-    transition: "all 0.15s",
-  },
-  btnDisabled: {
-    padding: "12px 16px", borderRadius: 8,
-    fontFamily: "'DM Mono', 'Fira Code', monospace",
-    fontSize: 14, fontWeight: 600,
-    backgroundColor: "#0f172a", color: "#334155",
-    border: "1px solid #1e293b", cursor: "not-allowed",
-    position: "relative",
-  },
-  pronto: {
-    position: "absolute", top: -8, right: -8, fontSize: 9,
-    backgroundColor: "#1e293b", color: "#64748b",
-    padding: "2px 6px", borderRadius: 4, letterSpacing: "0.06em",
-  },
-  creditBox: {
-    fontSize: 12, color: "#475569", backgroundColor: "#0a1628",
-    border: "1px solid #1e3a5f", borderRadius: 8, padding: "10px 14px",
-    lineHeight: 1.6,
-  },
-  resultPanel: {
-    backgroundColor: "#0a1628", border: "1px solid #1e3a5f",
-    borderRadius: 12, padding: "0", minHeight: 500, overflow: "hidden",
-    display: "flex", flexDirection: "column",
-  },
-  waitState: {
-    flex: 1, display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "center", padding: 40,
-  },
-  priceHero: {
-    textAlign: "center", padding: "32px 24px 24px",
-    borderBottom: "1px solid #1e3a5f", backgroundColor: "#060d1a",
-  },
-  productBlock: {
-    padding: "20px 24px", borderBottom: "1px solid #1e3a5f",
-    backgroundColor: "#080f1e",
-  },
-  diagBlock: {
-    padding: "20px 24px", flex: 1, overflow: "auto",
-  },
-  blockLabel: {
-    fontSize: 10, color: "#475569", letterSpacing: "0.14em",
-    textTransform: "uppercase", marginBottom: 10,
-  },
-  codeBox: {
-    backgroundColor: "#060d1a", border: "1px solid #1e3a5f",
-    borderRadius: 6, padding: "8px 12px", fontSize: 12,
-    color: "#7dd3fc", wordBreak: "break-all", maxHeight: 80, overflowY: "auto",
-  },
-  warnBox: {
-    marginTop: 12, fontSize: 13, color: "#fbbf24",
-    backgroundColor: "#1c1500", border: "1px solid #713f12",
-    borderRadius: 6, padding: "10px 12px", lineHeight: 1.5,
-  },
+  errorBanner:{ backgroundColor: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8, padding: "12px 16px", color: "#fca5a5", fontSize: 13, marginBottom: 12 },
+  debugBanner:{ backgroundColor: "#0a1a10", border: "1px solid #14532d", borderRadius: 8, padding: "10px 16px", color: "#6ee7b7", fontSize: 12, marginBottom: 20, lineHeight: 1.6 },
+  grid:       { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, maxWidth: 1100 },
+  leftPanel:  { display: "flex", flexDirection: "column", gap: 20 },
+  select:     { ...base, cursor: "pointer" },
+  input:      { ...base },
+  hint:       { fontSize: 11, color: "#475569", marginTop: 2, lineHeight: 1.5 },
+  emptyMsg:   { fontSize: 12, color: "#f87171", backgroundColor: "#1a0808", border: "1px solid #7f1d1d", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6, whiteSpace: "pre-line" },
+  btn:        { flex: 1, padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 700, backgroundColor: "#14532d", color: "#86efac", border: "1px solid #166534", transition: "all 0.15s" },
+  btnOff:     { padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 600, backgroundColor: "#0f172a", color: "#334155", border: "1px solid #1e293b", cursor: "not-allowed", position: "relative" },
+  pronto:     { position: "absolute", top: -8, right: -8, fontSize: 9, backgroundColor: "#1e293b", color: "#64748b", padding: "2px 6px", borderRadius: 4 },
+  creditBox:  { fontSize: 12, color: "#475569", backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6 },
+  resultPanel:{ backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 12, minHeight: 500, display: "flex", flexDirection: "column", overflow: "hidden" },
+  center:     { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 },
+  priceHero:  { textAlign: "center", padding: "36px 24px 28px", borderBottom: "1px solid #1e3a5f", backgroundColor: "#060d1a" },
+  productBlock:{ padding: "20px 24px", borderBottom: "1px solid #1e3a5f", backgroundColor: "#080f1e" },
+  diagBlock:  { padding: "20px 24px", flex: 1, overflowY: "auto" },
+  blockLabel: { fontSize: 10, color: "#475569", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 10 },
+  codeBox:    { backgroundColor: "#060d1a", border: "1px solid #1e3a5f", borderRadius: 6, padding: "8px 12px", fontSize: 12, color: "#7dd3fc", wordBreak: "break-all", maxHeight: 80, overflowY: "auto" },
+  warnBox:    { marginTop: 12, fontSize: 13, color: "#fbbf24", backgroundColor: "#1c1500", border: "1px solid #713f12", borderRadius: 6, padding: "10px 12px", lineHeight: 1.5 },
 };
