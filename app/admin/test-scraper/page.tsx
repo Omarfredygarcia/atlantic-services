@@ -50,7 +50,8 @@ type ScraperResult = {
 // ScrapingBee: Menards, Floor & Decor, Richard's Supply
 
 // FIX P0 — keywords de nombre, robusto ante variaciones de URL en BD
-const SB_NOMBRES = ["menards", "floor", "richard"];
+
+const SB_NOMBRES = ["menards", "floor", "home depot", "lowe"];
 
 function buildSearchUrl(tiendaUrl: string | null, term: string): string {
   if (!tiendaUrl || !term.trim()) return tiendaUrl ?? "";
