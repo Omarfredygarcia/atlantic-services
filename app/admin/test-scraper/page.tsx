@@ -47,17 +47,10 @@ type ScraperResult = {
 
 // ─── Tiendas ScrapingBee según Cláusula 2 del contrato ───────────────────────
 // SerpApi: Home Depot, Lowe's, ABC Supply, Builders FirstSource, ICC Floors Plus
-// ScrapingBee: Menards, Floor & Decor (+ tiendas locales sin soporte SerpApi)
+// ScrapingBee: Menards, Floor & Decor, Richard's Supply
 
-const SB_DOMAINS = ["menards.com", "flooranddecor.com", "richardssupply.com"];
-
-function isScrapingBee(url: string | null): boolean {
-  if (!url) return false;
-  try {
-    const host = new URL(url).hostname.replace("www.", "");
-    return SB_DOMAINS.some((d) => host.includes(d));
-  } catch { return false; }
-}
+// FIX P0 — keywords de nombre, robusto ante variaciones de URL en BD
+const SB_NOMBRES = ["menards", "floor", "richard"];
 
 function buildSearchUrl(tiendaUrl: string | null, term: string): string {
   if (!tiendaUrl || !term.trim()) return tiendaUrl ?? "";
@@ -72,6 +65,28 @@ function buildSearchUrl(tiendaUrl: string | null, term: string): string {
       return `https://www.richardssupply.com/search?q=${t}`;
     return `${tiendaUrl}?q=${t}`;
   } catch { return tiendaUrl; }
+}
+
+// buildSearchUrl por nombre de tienda (fallback cuando url es null o inválida)
+function buildSearchUrlByNombre(nombre: string, term: string): string {
+  if (!term.trim()) return "";
+  const t = encodeURIComponent(term.trim());
+  const n = nombre.toLowerCase();
+  if (n.includes("menards"))  return `https://www.menards.com/main/search.html?search=${t}`;
+  if (n.includes("floor"))    return `https://www.flooranddecor.com/search?q=${t}`;
+  if (n.includes("richard"))  return `https://www.richardssupply.com/search?q=${t}`;
+  return "";
+}
+
+function getSearchUrl(tienda: Tienda | undefined, term: string): string {
+  if (!tienda) return "";
+  if (tienda.url) {
+    try {
+      new URL(tienda.url); // valida que sea URL real
+      return buildSearchUrl(tienda.url, term);
+    } catch { /* url inválida, caer al fallback */ }
+  }
+  return buildSearchUrlByNombre(tienda.nombre, term);
 }
 
 function estrategiaLabel(s?: string) {
@@ -106,11 +121,11 @@ export default function TestScraperPage() {
   const [loading, setLoading]           = useState(false);
   const [loadingData, setLoadingData]   = useState(true);
   const [dbError, setDbError]           = useState<string | null>(null);
-  const [dbRaw, setDbRaw]               = useState<string>("");   // debug: qué llegó de BD
+  const [dbRaw, setDbRaw]               = useState<string>("");
 
   const RAILWAY_BASE = process.env.NEXT_PUBLIC_RAILWAY_RPA_URL ?? "";
 
-  // ── Carga tiendas
+  // ── Carga tiendas — FIX P0: filtro por nombre, no por URL
   useEffect(() => {
     async function load() {
       const { data, error } = await supabase
@@ -127,9 +142,17 @@ export default function TestScraperPage() {
 
       const raw = data ?? [];
       setTodasTiendas(raw);
-      setDbRaw(`${raw.length} tiendas en BD: ${raw.map(t => t.url ?? "null").join(", ")}`);
 
-      const sb = raw.filter((t) => isScrapingBee(t.url));
+      // Debug: muestra nombre=url para cada tienda recibida
+      setDbRaw(
+        `${raw.length} tiendas en BD: ` +
+        raw.map(t => `${t.nombre}=${t.url ?? "null"}`).join(" | ")
+      );
+
+      // FIX P0 — filtro robusto por nombre (no depende de formato de URL en BD)
+      const sb = raw.filter((t) =>
+        SB_NOMBRES.some((k) => t.nombre.toLowerCase().includes(k))
+      );
       setTiendas(sb);
       setLoadingData(false);
     }
@@ -152,14 +175,14 @@ export default function TestScraperPage() {
     load();
   }, [tiendaId]);
 
-  // ── Pre-carga search_query
+  // ── Pre-carga search_query al seleccionar material
   useEffect(() => {
     const item = catalogo.find((c) => c.id === materialId);
     if (!item) return;
     const sq = item.search_query ?? "";
     setTerm(sq);
     const t = tiendas.find((t) => t.id === tiendaId);
-    setSearchUrl(buildSearchUrl(t?.url ?? null, sq));
+    setSearchUrl(getSearchUrl(t, sq));
   }, [materialId]);
 
   const tiendaActual   = tiendas.find((t) => t.id === tiendaId);
@@ -167,7 +190,7 @@ export default function TestScraperPage() {
 
   function handleTermChange(v: string) {
     setTerm(v);
-    setSearchUrl(buildSearchUrl(tiendaActual?.url ?? null, v));
+    setSearchUrl(getSearchUrl(tiendaActual, v));
   }
 
   async function run() {
@@ -216,8 +239,13 @@ export default function TestScraperPage() {
           🔍 <strong>Debug BD:</strong> {dbRaw || "(sin datos)"}
           {todasTiendas.length > 0 && tiendas.length === 0 && (
             <span style={{ color: "#f87171", marginLeft: 12 }}>
-              ← Hay {todasTiendas.length} tiendas en BD pero ninguna tiene URL de Menards / Floor & Decor / Richard's Supply.
-              Verifica que las URLs incluyan el dominio correcto (ej: https://menards.com).
+              ← Hay {todasTiendas.length} tiendas en BD pero ninguna tiene nombre
+              que incluya "menards", "floor" o "richard". Verifica los nombres en Supabase.
+            </span>
+          )}
+          {tiendas.length > 0 && (
+            <span style={{ color: "#4ade80", marginLeft: 12 }}>
+              ← ✓ {tiendas.length} tiendas ScrapingBee detectadas: {tiendas.map(t => t.nombre).join(", ")}
             </span>
           )}
         </div>
@@ -467,30 +495,30 @@ const base: React.CSSProperties = {
 };
 
 const S: Record<string, React.CSSProperties> = {
-  page:       { minHeight: "100vh", backgroundColor: "#080f1e", color: "#e2e8f0", fontFamily: "'DM Mono','Fira Code',monospace", padding: "2.5rem 2rem" },
-  header:     { marginBottom: 28, paddingBottom: 20, borderBottom: "1px solid #1e3a5f" },
-  led:        { width: 12, height: 12, borderRadius: "50%", backgroundColor: "#22c55e", boxShadow: "0 0 10px #22c55e66" },
-  headerSub:  { fontSize: 11, color: "#475569", letterSpacing: "0.16em", textTransform: "uppercase" },
-  h1:         { fontSize: 28, fontWeight: 700, margin: "8px 0 6px", color: "#f8fafc" },
-  headerDesc: { fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 },
-  errorBanner:{ backgroundColor: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8, padding: "12px 16px", color: "#fca5a5", fontSize: 13, marginBottom: 12 },
-  debugBanner:{ backgroundColor: "#0a1a10", border: "1px solid #14532d", borderRadius: 8, padding: "10px 16px", color: "#6ee7b7", fontSize: 12, marginBottom: 20, lineHeight: 1.6 },
-  grid:       { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, maxWidth: 1100 },
-  leftPanel:  { display: "flex", flexDirection: "column", gap: 20 },
-  select:     { ...base, cursor: "pointer" },
-  input:      { ...base },
-  hint:       { fontSize: 11, color: "#475569", marginTop: 2, lineHeight: 1.5 },
-  emptyMsg:   { fontSize: 12, color: "#f87171", backgroundColor: "#1a0808", border: "1px solid #7f1d1d", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6, whiteSpace: "pre-line" },
-  btn:        { flex: 1, padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 700, backgroundColor: "#14532d", color: "#86efac", border: "1px solid #166534", transition: "all 0.15s" },
-  btnOff:     { padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 600, backgroundColor: "#0f172a", color: "#334155", border: "1px solid #1e293b", cursor: "not-allowed", position: "relative" },
-  pronto:     { position: "absolute", top: -8, right: -8, fontSize: 9, backgroundColor: "#1e293b", color: "#64748b", padding: "2px 6px", borderRadius: 4 },
-  creditBox:  { fontSize: 12, color: "#475569", backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6 },
-  resultPanel:{ backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 12, minHeight: 500, display: "flex", flexDirection: "column", overflow: "hidden" },
-  center:     { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 },
-  priceHero:  { textAlign: "center", padding: "36px 24px 28px", borderBottom: "1px solid #1e3a5f", backgroundColor: "#060d1a" },
+  page:        { minHeight: "100vh", backgroundColor: "#080f1e", color: "#e2e8f0", fontFamily: "'DM Mono','Fira Code',monospace", padding: "2.5rem 2rem" },
+  header:      { marginBottom: 28, paddingBottom: 20, borderBottom: "1px solid #1e3a5f" },
+  led:         { width: 12, height: 12, borderRadius: "50%", backgroundColor: "#22c55e", boxShadow: "0 0 10px #22c55e66" },
+  headerSub:   { fontSize: 11, color: "#475569", letterSpacing: "0.16em", textTransform: "uppercase" },
+  h1:          { fontSize: 28, fontWeight: 700, margin: "8px 0 6px", color: "#f8fafc" },
+  headerDesc:  { fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 },
+  errorBanner: { backgroundColor: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8, padding: "12px 16px", color: "#fca5a5", fontSize: 13, marginBottom: 12 },
+  debugBanner: { backgroundColor: "#0a1a10", border: "1px solid #14532d", borderRadius: 8, padding: "10px 16px", color: "#6ee7b7", fontSize: 12, marginBottom: 20, lineHeight: 1.6 },
+  grid:        { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, maxWidth: 1100 },
+  leftPanel:   { display: "flex", flexDirection: "column", gap: 20 },
+  select:      { ...base, cursor: "pointer" },
+  input:       { ...base },
+  hint:        { fontSize: 11, color: "#475569", marginTop: 2, lineHeight: 1.5 },
+  emptyMsg:    { fontSize: 12, color: "#f87171", backgroundColor: "#1a0808", border: "1px solid #7f1d1d", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6, whiteSpace: "pre-line" },
+  btn:         { flex: 1, padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 700, backgroundColor: "#14532d", color: "#86efac", border: "1px solid #166534", transition: "all 0.15s" },
+  btnOff:      { padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 600, backgroundColor: "#0f172a", color: "#334155", border: "1px solid #1e293b", cursor: "not-allowed", position: "relative" },
+  pronto:      { position: "absolute", top: -8, right: -8, fontSize: 9, backgroundColor: "#1e293b", color: "#64748b", padding: "2px 6px", borderRadius: 4 },
+  creditBox:   { fontSize: 12, color: "#475569", backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6 },
+  resultPanel: { backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 12, minHeight: 500, display: "flex", flexDirection: "column", overflow: "hidden" },
+  center:      { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 },
+  priceHero:   { textAlign: "center", padding: "36px 24px 28px", borderBottom: "1px solid #1e3a5f", backgroundColor: "#060d1a" },
   productBlock:{ padding: "20px 24px", borderBottom: "1px solid #1e3a5f", backgroundColor: "#080f1e" },
-  diagBlock:  { padding: "20px 24px", flex: 1, overflowY: "auto" },
-  blockLabel: { fontSize: 10, color: "#475569", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 10 },
-  codeBox:    { backgroundColor: "#060d1a", border: "1px solid #1e3a5f", borderRadius: 6, padding: "8px 12px", fontSize: 12, color: "#7dd3fc", wordBreak: "break-all", maxHeight: 80, overflowY: "auto" },
-  warnBox:    { marginTop: 12, fontSize: 13, color: "#fbbf24", backgroundColor: "#1c1500", border: "1px solid #713f12", borderRadius: 6, padding: "10px 12px", lineHeight: 1.5 },
+  diagBlock:   { padding: "20px 24px", flex: 1, overflowY: "auto" },
+  blockLabel:  { fontSize: 10, color: "#475569", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 10 },
+  codeBox:     { backgroundColor: "#060d1a", border: "1px solid #1e3a5f", borderRadius: 6, padding: "8px 12px", fontSize: 12, color: "#7dd3fc", wordBreak: "break-all", maxHeight: 80, overflowY: "auto" },
+  warnBox:     { marginTop: 12, fontSize: 13, color: "#fbbf24", backgroundColor: "#1c1500", border: "1px solid #713f12", borderRadius: 6, padding: "10px 12px", lineHeight: 1.5 },
 };
