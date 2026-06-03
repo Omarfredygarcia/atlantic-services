@@ -233,7 +233,8 @@ export default function TestScraperPage() {
     const sq = item.search_query ?? "";
     setTerm(sq);
     const t = tiendas.find((t) => t.id === tiendaId);
-    setSearchUrl(getSearchUrl(t, sq));
+    // URL directa → Modo A (ScrapingBee directo). Texto → Modo B (construye /search?q=)
+    setSearchUrl(sq.startsWith("http") ? sq : getSearchUrl(t, sq));
   }, [materialId]);
 
   const tiendaActual   = tiendas.find((t) => t.id === tiendaId);
@@ -243,7 +244,7 @@ export default function TestScraperPage() {
 
   function handleTermChange(v: string) {
     setTerm(v);
-    setSearchUrl(getSearchUrl(tiendaActual, v));
+    setSearchUrl(v.startsWith("http") ? v : getSearchUrl(tiendaActual, v));
   }
 
   async function run() {
@@ -374,7 +375,7 @@ export default function TestScraperPage() {
               placeholder="Se construye automáticamente al seleccionar tienda + material" />
             <div style={S.hint}>
               {esFD
-                ? "F&D híbrido: SerpApi URL → ScrapingBee precio. Pega URL directa de producto para saltarse SerpApi (1 llamada SB)."
+                ? "Modo A: URL directa de producto → ScrapingBee directo (0 SerpApi) ✓ · Modo B: /search?q=... → SerpApi primero (puede fallar)"
                 : "Pega URL directa de producto para 1 sola llamada ScrapingBee"}
             </div>
           </Field>
