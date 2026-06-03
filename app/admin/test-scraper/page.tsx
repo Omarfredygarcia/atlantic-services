@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase-client";
 
-// Instancia al nivel de módulo — igual que en el resto de la app
 const supabase = createClient();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -43,39 +42,66 @@ type ScraperResult = {
   price_context?: string;
   message?: string;
   error?: string | null;
+  store_detected?: string;
 };
 
-// ─── Tiendas ScrapingBee según Cláusula 2 del contrato ───────────────────────
-// SerpApi: Home Depot, Lowe's, ABC Supply, Builders FirstSource, ICC Floors Plus
-// ScrapingBee: Menards, Floor & Decor, Richard's Supply
-
-// FIX P0 — keywords de nombre, robusto ante variaciones de URL en BD
-
+// ─── Constantes de tiendas ────────────────────────────────────────────────────
+// Las 4 tiendas del contrato — filtro por nombre, robusto ante variaciones de URL en BD
+// Cuando se migre a BD: agregar campo scraper_mode a tabla tiendas
 const SB_NOMBRES = ["menards", "floor", "home depot", "lowe"];
+
+// Modo de scraping por tienda:
+//   serpapi   → SerpApi Google Shopping (Home Depot, Lowe's, Menards)
+//   hybrid    → SerpApi URL + ScrapingBee precio (Floor & Decor)
+//   scrapingbee → ScrapingBee 2 llamadas (Menards también soportado)
+// El sandbox siempre llama modo=scrapingbee — el backend decide el flujo internamente.
+// En el frontend solo usamos esto para mostrar el hint correcto al usuario.
+const STORE_MODE: Record<string, "serpapi" | "hybrid" | "scrapingbee"> = {
+  "home depot": "serpapi",
+  "lowe":       "serpapi",
+  "menards":    "scrapingbee",
+  "floor":      "hybrid",
+};
+
+function getStoreMode(nombre: string): "serpapi" | "hybrid" | "scrapingbee" {
+  const n = nombre.toLowerCase();
+  for (const [key, mode] of Object.entries(STORE_MODE)) {
+    if (n.includes(key)) return mode;
+  }
+  return "scrapingbee";
+}
+
+// ─── URL helpers ──────────────────────────────────────────────────────────────
+// URLs hardcodeadas — estables, no cambian seguido.
+// Cuando funcionen bien → migrar a campo search_url_pattern en tabla tiendas.
+const STORE_SEARCH_URLS: Record<string, string> = {
+  "homedepot":     "https://www.homedepot.com/s/",
+  "lowes":         "https://www.lowes.com/search?searchTerm=",
+  "menards":       "https://www.menards.com/main/search.html?search=",
+  "flooranddecor": "https://www.flooranddecor.com/search?q=",
+};
 
 function buildSearchUrl(tiendaUrl: string | null, term: string): string {
   if (!tiendaUrl || !term.trim()) return tiendaUrl ?? "";
   const t = encodeURIComponent(term.trim());
   try {
     const host = new URL(tiendaUrl).hostname.replace("www.", "");
-    if (host.includes("menards.com"))
-      return `https://www.menards.com/main/search.html?search=${t}`;
-    if (host.includes("flooranddecor.com"))
-      return `https://www.flooranddecor.com/search?q=${t}`;
-    if (host.includes("richardssupply.com"))
-      return `https://www.richardssupply.com/search?q=${t}`;
+    if (host.includes("menards.com"))      return `https://www.menards.com/main/search.html?search=${t}`;
+    if (host.includes("flooranddecor.com")) return `https://www.flooranddecor.com/search?q=${t}`;
+    if (host.includes("homedepot.com"))    return `https://www.homedepot.com/s/${t}`;
+    if (host.includes("lowes.com"))        return `https://www.lowes.com/search?searchTerm=${t}`;
     return `${tiendaUrl}?q=${t}`;
   } catch { return tiendaUrl; }
 }
 
-// buildSearchUrl por nombre de tienda (fallback cuando url es null o inválida)
 function buildSearchUrlByNombre(nombre: string, term: string): string {
   if (!term.trim()) return "";
   const t = encodeURIComponent(term.trim());
   const n = nombre.toLowerCase();
-  if (n.includes("menards"))  return `https://www.menards.com/main/search.html?search=${t}`;
-  if (n.includes("floor"))    return `https://www.flooranddecor.com/search?q=${t}`;
-  if (n.includes("richard"))  return `https://www.richardssupply.com/search?q=${t}`;
+  if (n.includes("menards"))    return `https://www.menards.com/main/search.html?search=${t}`;
+  if (n.includes("floor"))      return `https://www.flooranddecor.com/search?q=${t}`;
+  if (n.includes("home depot")) return `https://www.homedepot.com/s/${t}`;
+  if (n.includes("lowe"))       return `https://www.lowes.com/search?searchTerm=${t}`;
   return "";
 }
 
@@ -83,18 +109,29 @@ function getSearchUrl(tienda: Tienda | undefined, term: string): string {
   if (!tienda) return "";
   if (tienda.url) {
     try {
-      new URL(tienda.url); // valida que sea URL real
+      new URL(tienda.url);
       return buildSearchUrl(tienda.url, term);
-    } catch { /* url inválida, caer al fallback */ }
+    } catch { /* url inválida */ }
   }
   return buildSearchUrlByNombre(tienda.nombre, term);
 }
+
+// Floor & Decor: la URL de búsqueda la construye el backend internamente con
+// SerpApi site:flooranddecor.com — no se necesita en el frontend.
+// El campo searchUrl para F&D se usa solo para mostrar la tienda_url base.
+function isFloorAndDecor(nombre: string): boolean {
+  return nombre.toLowerCase().includes("floor");
+}
+
+// ─── Helpers UI ───────────────────────────────────────────────────────────────
 
 function estrategiaLabel(s?: string) {
   const map: Record<string, string> = {
     "edlp":                  "EDLP — precio oficial",
     "json-ld":               "JSON-LD — datos estructurados",
+    "json-ld-offers":        "JSON-LD offers — datos estructurados",
     "fallback-primer-dolar": "Fallback $ — menos confiable",
+    "google-shopping":       "Google Shopping",
   };
   return s ? (map[s] ?? s) : "—";
 }
@@ -106,6 +143,21 @@ function scoreColor(n?: number | null) {
 function scoreLabel(n?: number | null) {
   if (n == null) return "";
   return n >= 5 ? "✓ Confiable" : n >= 3 ? "~ Aceptable" : "⚠ Posible error";
+}
+
+function modeBadge(mode: "serpapi" | "hybrid" | "scrapingbee") {
+  const cfg = {
+    serpapi:     { label: "SerpApi",          bg: "#1e3a5f", color: "#93c5fd" },
+    hybrid:      { label: "SerpApi + SB",     bg: "#1a1500", color: "#fbbf24" },
+    scrapingbee: { label: "ScrapingBee",       bg: "#0a1a10", color: "#4ade80" },
+  };
+  const c = cfg[mode];
+  return (
+    <span style={{ fontSize: 11, backgroundColor: c.bg, color: c.color,
+      padding: "2px 8px", borderRadius: 4, marginLeft: 8, fontWeight: 600 }}>
+      {c.label}
+    </span>
+  );
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -126,7 +178,7 @@ export default function TestScraperPage() {
 
   const RAILWAY_BASE = process.env.NEXT_PUBLIC_RAILWAY_RPA_URL ?? "";
 
-  // ── Carga tiendas — FIX P0: filtro por nombre, no por URL
+  // ── Carga tiendas
   useEffect(() => {
     async function load() {
       const { data, error } = await supabase
@@ -144,13 +196,11 @@ export default function TestScraperPage() {
       const raw = data ?? [];
       setTodasTiendas(raw);
 
-      // Debug: muestra nombre=url para cada tienda recibida
       setDbRaw(
         `${raw.length} tiendas en BD: ` +
         raw.map(t => `${t.nombre}=${t.url ?? "null"}`).join(" | ")
       );
 
-      // FIX P0 — filtro robusto por nombre (no depende de formato de URL en BD)
       const sb = raw.filter((t) =>
         SB_NOMBRES.some((k) => t.nombre.toLowerCase().includes(k))
       );
@@ -183,22 +233,37 @@ export default function TestScraperPage() {
     const sq = item.search_query ?? "";
     setTerm(sq);
     const t = tiendas.find((t) => t.id === tiendaId);
-    setSearchUrl(getSearchUrl(t, sq));
+    // F&D: no construir URL de búsqueda — el backend la maneja internamente
+    if (t && isFloorAndDecor(t.nombre)) {
+      setSearchUrl(t.url ?? "https://www.flooranddecor.com");
+    } else {
+      setSearchUrl(getSearchUrl(t, sq));
+    }
   }, [materialId]);
 
   const tiendaActual   = tiendas.find((t) => t.id === tiendaId);
   const materialActual = catalogo.find((c) => c.id === materialId);
+  const storeMode      = tiendaActual ? getStoreMode(tiendaActual.nombre) : "scrapingbee";
+  const esFD           = tiendaActual ? isFloorAndDecor(tiendaActual.nombre) : false;
 
   function handleTermChange(v: string) {
     setTerm(v);
-    setSearchUrl(getSearchUrl(tiendaActual, v));
+    if (!esFD) setSearchUrl(getSearchUrl(tiendaActual, v));
   }
 
   async function run() {
-    if (!searchUrl.trim()) return;
+    if (!term.trim() && !searchUrl.trim()) return;
     setLoading(true); setResult(null);
     try {
-      const qs = new URLSearchParams({ base_url: searchUrl, term, modo: "scrapingbee", debug: "1" });
+      // F&D: base_url = URL base de la tienda, term = search_query
+      // El backend detecta flooranddecor y usa fetch_price_flooranddecor (híbrido)
+      // Resto de tiendas: base_url = URL de búsqueda construida, term = search_query
+      const qs = new URLSearchParams({
+        base_url: searchUrl || tiendaActual?.url || "",
+        term,
+        modo: "scrapingbee",
+        debug: "1",
+      });
       const res = await fetch(`${RAILWAY_BASE}/test-scraper?${qs}`, { cache: "no-store" });
       setResult(await res.json());
     } catch (e: any) {
@@ -206,9 +271,10 @@ export default function TestScraperPage() {
     } finally { setLoading(false); }
   }
 
+  const canRun    = !!term.trim() && (!!searchUrl.trim() || esFD) && !loading;
   const precioFmt = result?.precio != null ? `$${result.precio.toFixed(2)}` : null;
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <main style={S.page}>
@@ -221,9 +287,13 @@ export default function TestScraperPage() {
         </div>
         <h1 style={S.h1}>Test Scraper de Precios</h1>
         <p style={S.headerDesc}>
-          Sandbox exclusivo para tiendas <strong style={{ color: "#93c5fd" }}>ScrapingBee</strong>:
-          Menards, Floor & Decor, Richard's Supply.
-          Las tiendas SerpApi (Home Depot, Lowe's…) operan directo en el motor.
+          Sandbox para las <strong style={{ color: "#93c5fd" }}>4 tiendas del contrato</strong>.
+          {" "}Modo por tienda:{" "}
+          <span style={{ color: "#4ade80" }}>Menards → ScrapingBee 2 llamadas</span>
+          {" · "}
+          <span style={{ color: "#fbbf24" }}>Floor & Decor → SerpApi URL + ScrapingBee precio (híbrido)</span>
+          {" · "}
+          <span style={{ color: "#93c5fd" }}>Home Depot / Lowe's → SerpApi directo</span>
         </p>
       </div>
 
@@ -234,19 +304,18 @@ export default function TestScraperPage() {
         </div>
       )}
 
-      {/* Debug — visible mientras se resuelve el problema de tiendas */}
+      {/* Debug banner */}
       {!loadingData && (
         <div style={S.debugBanner}>
           🔍 <strong>Debug BD:</strong> {dbRaw || "(sin datos)"}
           {todasTiendas.length > 0 && tiendas.length === 0 && (
             <span style={{ color: "#f87171", marginLeft: 12 }}>
-              ← Hay {todasTiendas.length} tiendas en BD pero ninguna tiene nombre
-              que incluya "menards", "floor" o "richard". Verifica los nombres en Supabase.
+              ← Hay {todasTiendas.length} tiendas en BD pero ninguna coincide con los nombres esperados.
             </span>
           )}
           {tiendas.length > 0 && (
             <span style={{ color: "#4ade80", marginLeft: 12 }}>
-              ← ✓ {tiendas.length} tiendas ScrapingBee detectadas: {tiendas.map(t => t.nombre).join(", ")}
+              ← ✓ {tiendas.length} tiendas detectadas: {tiendas.map(t => t.nombre).join(", ")}
             </span>
           )}
         </div>
@@ -262,16 +331,23 @@ export default function TestScraperPage() {
               <div style={S.emptyMsg}>
                 {dbError
                   ? "Error de conexión — ver banner arriba."
-                  : "No se encontraron tiendas ScrapingBee activas.\nVer debug arriba para más detalle."}
+                  : "No se encontraron tiendas activas.\nVer debug arriba para más detalle."}
               </div>
             ) : (
               <select style={S.select} value={tiendaId}
                 onChange={(e) => { setTiendaId(e.target.value); setResult(null); }}>
                 <option value="">— seleccionar tienda —</option>
-                {tiendas.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                {tiendas.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
               </select>
             )}
-            {tiendaActual?.url && <div style={S.hint}>{tiendaActual.url}</div>}
+            {tiendaActual && (
+              <div style={S.hint}>
+                {tiendaActual.url}
+                {modeBadge(storeMode)}
+              </div>
+            )}
           </Field>
 
           <Field label="Material del catálogo" color="#a78bfa">
@@ -290,19 +366,31 @@ export default function TestScraperPage() {
             )}
           </Field>
 
-          <Field label="Search query (editable)" color="#34d399">
+          <Field label="Search Query (editable)" color="#34d399">
             <input style={S.input} value={term}
               onChange={(e) => handleTermChange(e.target.value)}
-              placeholder="ej: Charlotte Pipe 4 in x 10 ft PVC Sewer Drain Pipe" />
+              placeholder="ej: AquaGuard Performance Golden Road Waterproof Laminate Plank" />
             <div style={S.hint}>Sin comillas ni ® ™ — usar "in" y "ft" en lugar de " y '</div>
           </Field>
 
-          <Field label="URL de búsqueda (editable)" color="#fb923c">
-            <textarea style={{ ...S.input, resize: "vertical", minHeight: 76, fontSize: 13, lineHeight: 1.55 }}
-              value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)}
-              placeholder="Se construye automáticamente al seleccionar tienda + material" />
-            <div style={S.hint}>Pega URL directa de producto para 1 sola llamada ScrapingBee</div>
-          </Field>
+          {/* URL de búsqueda — oculta para F&D, visible para el resto */}
+          {esFD ? (
+            <Field label="URL de búsqueda (editable)" color="#fb923c">
+              <div style={{ ...S.input, color: "#475569", fontSize: 13, lineHeight: 1.6, minHeight: 76 }}>
+                <span style={{ color: "#fbbf24" }}>Flujo híbrido activo para Floor & Decor:</span><br />
+                1. SerpApi busca <code style={{ color: "#93c5fd" }}>site:flooranddecor.com {"{query}"}</code> → obtiene URL del producto<br />
+                2. ScrapingBee va directo a esa URL → extrae precio<br />
+                <span style={{ color: "#475569", fontSize: 11 }}>No se usa la página de búsqueda (bloquea ScrapingBee)</span>
+              </div>
+            </Field>
+          ) : (
+            <Field label="URL de búsqueda (editable)" color="#fb923c">
+              <textarea style={{ ...S.input, resize: "vertical", minHeight: 76, fontSize: 13, lineHeight: 1.55 }}
+                value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)}
+                placeholder="Se construye automáticamente al seleccionar tienda + material" />
+              <div style={S.hint}>Pega URL directa de producto para 1 sola llamada ScrapingBee</div>
+            </Field>
+          )}
 
           <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
             <button style={S.btnOff} disabled>
@@ -310,16 +398,23 @@ export default function TestScraperPage() {
               <span style={S.pronto}>PRONTO</span>
             </button>
             <button
-              style={{ ...S.btn, opacity: !searchUrl || loading ? 0.5 : 1, cursor: !searchUrl || loading ? "not-allowed" : "pointer" }}
-              disabled={!searchUrl || loading} onClick={run}>
+              style={{ ...S.btn,
+                opacity: canRun ? 1 : 0.5,
+                cursor: canRun ? "pointer" : "not-allowed",
+                backgroundColor: esFD ? "#1a1500" : "#14532d",
+                color: esFD ? "#fbbf24" : "#86efac",
+                border: esFD ? "1px solid #713f12" : "1px solid #166534",
+              }}
+              disabled={!canRun} onClick={run}>
               {loading
                 ? <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}><Spin />Consultando…</span>
-                : "🐝 Probar ScrapingBee"}
+                : esFD ? "🔀 Probar F&D Híbrido" : "🐝 Probar ScrapingBee"}
             </button>
           </div>
 
           <div style={S.creditBox}>
-            🐝 <strong>Créditos ScrapingBee:</strong> ~525 restantes → ~260 pruebas de 2 llamadas.
+            🐝 <strong>Créditos ScrapingBee:</strong> ~525 restantes → ~260 pruebas de 2 llamadas.<br />
+            F&D híbrido: 1 crédito SerpApi + 1 crédito SB por prueba.<br />
             Máx 15 pruebas Menards + 5-10 Floor & Decor antes de ampliar plan.
           </div>
 
@@ -332,8 +427,8 @@ export default function TestScraperPage() {
             <div style={S.center}>
               <div style={{ fontSize: 52, marginBottom: 12 }}>🐝</div>
               <div style={{ color: "#475569", fontSize: 15 }}>Esperando consulta…</div>
-              <div style={{ color: "#1e3a5f", fontSize: 12, marginTop: 8, textAlign: "center", maxWidth: 220 }}>
-                Selecciona tienda → material → presiona Probar ScrapingBee
+              <div style={{ color: "#1e3a5f", fontSize: 12, marginTop: 8, textAlign: "center", maxWidth: 240 }}>
+                Selecciona tienda → material → presiona el botón
               </div>
             </div>
           )}
@@ -341,8 +436,12 @@ export default function TestScraperPage() {
           {loading && (
             <div style={S.center}>
               <Spin size={40} />
-              <div style={{ color: "#60a5fa", fontSize: 15, marginTop: 18 }}>Consultando ScrapingBee…</div>
-              <div style={{ color: "#475569", fontSize: 12, marginTop: 6 }}>~13-15 seg (2 llamadas)</div>
+              <div style={{ color: esFD ? "#fbbf24" : "#60a5fa", fontSize: 15, marginTop: 18 }}>
+                {esFD ? "Consultando F&D híbrido…" : "Consultando ScrapingBee…"}
+              </div>
+              <div style={{ color: "#475569", fontSize: 12, marginTop: 6 }}>
+                {esFD ? "SerpApi URL → ScrapingBee precio (~15 seg)" : "~13-15 seg (2 llamadas)"}
+              </div>
             </div>
           )}
 
@@ -350,10 +449,10 @@ export default function TestScraperPage() {
             <>
               {/* Precio hero */}
               <div style={S.priceHero}>
-                {result.error ? (
+                {result.error && !result.price_found ? (
                   <>
                     <div style={{ fontSize: 44, color: "#f87171" }}>✕</div>
-                    <div style={{ color: "#f87171", fontSize: 14, marginTop: 8 }}>{result.error}</div>
+                    <div style={{ color: "#f87171", fontSize: 14, marginTop: 8 }}>{result.message || result.error}</div>
                   </>
                 ) : (
                   <>
@@ -366,12 +465,19 @@ export default function TestScraperPage() {
                     </div>
                     <div style={{
                       fontSize: 14, marginTop: 10,
-                      color: result.price_strategy === "edlp" ? "#4ade80"
-                           : result.price_strategy === "json-ld" ? "#fbbf24"
+                      color: result.price_strategy === "edlp"             ? "#4ade80"
+                           : result.price_strategy === "json-ld-offers"   ? "#4ade80"
+                           : result.price_strategy === "json-ld"          ? "#fbbf24"
+                           : result.price_strategy === "google-shopping"  ? "#93c5fd"
                            : "#f87171",
                     }}>
                       {estrategiaLabel(result.price_strategy)}
                     </div>
+                    {result.fuente && (
+                      <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
+                        {result.fuente}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -379,12 +485,12 @@ export default function TestScraperPage() {
               {/* Producto seleccionado */}
               {result.product_title && (
                 <div style={S.productBlock}>
-                  <div style={S.blockLabel}>Producto seleccionado por el robot</div>
+                  <div style={S.blockLabel}>Producto seleccionado</div>
                   <div style={{ color: "#e2e8f0", fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>
                     {result.product_title}
                   </div>
                   <div style={{ display: "flex", gap: 28 }}>
-                    {result.match_score != null && (
+                    {result.match_score != null && result.match_score > 0 && (
                       <div>
                         <span style={{ color: "#64748b", fontSize: 12 }}>Match score  </span>
                         <span style={{ color: scoreColor(result.match_score), fontSize: 22, fontWeight: 700 }}>
@@ -413,8 +519,9 @@ export default function TestScraperPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {([
                     ["Status",           result.status],
+                    ["Tienda detectada", result.store_detected],
                     ["Tiempo",           result.tiempo_ms != null ? `${result.tiempo_ms} ms` : null],
-                    ["HTML",             result.html_length != null ? `${result.html_length.toLocaleString()} bytes` : null],
+                    ["HTML",             result.html_length != null && result.html_length > 0 ? `${result.html_length.toLocaleString()} bytes` : null],
                     ["Captcha",          result.captcha_detected != null ? (result.captcha_detected ? "⚠️ Detectado" : "✓ Limpio") : null],
                     ["Término presente", result.search_term_present != null ? (result.search_term_present ? "✓ Sí" : "✗ No") : null],
                   ] as [string, string | null | undefined][]).map(([k, v]) =>
@@ -444,7 +551,7 @@ export default function TestScraperPage() {
                   </div>
                 )}
 
-                {result.message && (
+                {result.message && !result.price_found && (
                   <div style={S.warnBox}>⚠️ {result.message}</div>
                 )}
               </div>
@@ -508,12 +615,12 @@ const S: Record<string, React.CSSProperties> = {
   leftPanel:   { display: "flex", flexDirection: "column", gap: 20 },
   select:      { ...base, cursor: "pointer" },
   input:       { ...base },
-  hint:        { fontSize: 11, color: "#475569", marginTop: 2, lineHeight: 1.5 },
+  hint:        { fontSize: 11, color: "#475569", marginTop: 2, lineHeight: 1.5, display: "flex", alignItems: "center" },
   emptyMsg:    { fontSize: 12, color: "#f87171", backgroundColor: "#1a0808", border: "1px solid #7f1d1d", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6, whiteSpace: "pre-line" },
-  btn:         { flex: 1, padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 700, backgroundColor: "#14532d", color: "#86efac", border: "1px solid #166534", transition: "all 0.15s" },
+  btn:         { flex: 1, padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 700, transition: "all 0.15s" },
   btnOff:      { padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 600, backgroundColor: "#0f172a", color: "#334155", border: "1px solid #1e293b", cursor: "not-allowed", position: "relative" },
   pronto:      { position: "absolute", top: -8, right: -8, fontSize: 9, backgroundColor: "#1e293b", color: "#64748b", padding: "2px 6px", borderRadius: 4 },
-  creditBox:   { fontSize: 12, color: "#475569", backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6 },
+  creditBox:   { fontSize: 12, color: "#475569", backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 8, padding: "10px 14px", lineHeight: 1.8 },
   resultPanel: { backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 12, minHeight: 500, display: "flex", flexDirection: "column", overflow: "hidden" },
   center:      { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 },
   priceHero:   { textAlign: "center", padding: "36px 24px 28px", borderBottom: "1px solid #1e3a5f", backgroundColor: "#060d1a" },
