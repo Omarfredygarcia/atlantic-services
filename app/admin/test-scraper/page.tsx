@@ -233,12 +233,7 @@ export default function TestScraperPage() {
     const sq = item.search_query ?? "";
     setTerm(sq);
     const t = tiendas.find((t) => t.id === tiendaId);
-    // F&D: no construir URL de búsqueda — el backend la maneja internamente
-    if (t && isFloorAndDecor(t.nombre)) {
-      setSearchUrl(t.url ?? "https://www.flooranddecor.com");
-    } else {
-      setSearchUrl(getSearchUrl(t, sq));
-    }
+    setSearchUrl(getSearchUrl(t, sq));
   }, [materialId]);
 
   const tiendaActual   = tiendas.find((t) => t.id === tiendaId);
@@ -248,16 +243,15 @@ export default function TestScraperPage() {
 
   function handleTermChange(v: string) {
     setTerm(v);
-    if (!esFD) setSearchUrl(getSearchUrl(tiendaActual, v));
+    setSearchUrl(getSearchUrl(tiendaActual, v));
   }
 
   async function run() {
     if (!term.trim() && !searchUrl.trim()) return;
     setLoading(true); setResult(null);
     try {
-      // F&D: base_url = URL base de la tienda, term = search_query
-      // El backend detecta flooranddecor y usa fetch_price_flooranddecor (híbrido)
-      // Resto de tiendas: base_url = URL de búsqueda construida, term = search_query
+      // base_url = URL de búsqueda construida (todas las tiendas, incluyendo F&D)
+      // Si base_url es URL directa de producto → backend salta SerpApi (1 llamada SB)
       const qs = new URLSearchParams({
         base_url: searchUrl || tiendaActual?.url || "",
         term,
@@ -373,24 +367,17 @@ export default function TestScraperPage() {
             <div style={S.hint}>Sin comillas ni ® ™ — usar "in" y "ft" en lugar de " y '</div>
           </Field>
 
-          {/* URL de búsqueda — oculta para F&D, visible para el resto */}
-          {esFD ? (
-            <Field label="URL de búsqueda (editable)" color="#fb923c">
-              <div style={{ ...S.input, color: "#475569", fontSize: 13, lineHeight: 1.6, minHeight: 76 }}>
-                <span style={{ color: "#fbbf24" }}>Flujo híbrido activo para Floor & Decor:</span><br />
-                1. SerpApi busca <code style={{ color: "#93c5fd" }}>site:flooranddecor.com {"{query}"}</code> → obtiene URL del producto<br />
-                2. ScrapingBee va directo a esa URL → extrae precio<br />
-                <span style={{ color: "#475569", fontSize: 11 }}>No se usa la página de búsqueda (bloquea ScrapingBee)</span>
-              </div>
-            </Field>
-          ) : (
-            <Field label="URL de búsqueda (editable)" color="#fb923c">
-              <textarea style={{ ...S.input, resize: "vertical", minHeight: 76, fontSize: 13, lineHeight: 1.55 }}
-                value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)}
-                placeholder="Se construye automáticamente al seleccionar tienda + material" />
-              <div style={S.hint}>Pega URL directa de producto para 1 sola llamada ScrapingBee</div>
-            </Field>
-          )}
+          {/* URL de búsqueda — editable para todas las tiendas */}
+          <Field label="URL de búsqueda (editable)" color="#fb923c">
+            <textarea style={{ ...S.input, resize: "vertical", minHeight: 76, fontSize: 13, lineHeight: 1.55 }}
+              value={searchUrl} onChange={(e) => setSearchUrl(e.target.value)}
+              placeholder="Se construye automáticamente al seleccionar tienda + material" />
+            <div style={S.hint}>
+              {esFD
+                ? "F&D híbrido: SerpApi URL → ScrapingBee precio. Pega URL directa de producto para saltarse SerpApi (1 llamada SB)."
+                : "Pega URL directa de producto para 1 sola llamada ScrapingBee"}
+            </div>
+          </Field>
 
           <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
             <button style={S.btnOff} disabled>
