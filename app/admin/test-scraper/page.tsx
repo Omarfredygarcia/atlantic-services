@@ -175,7 +175,7 @@ function modeBadge(mode: "serpapi" | "hybrid" | "scrapingbee") {
   };
   const c = cfg[mode];
   return (
-    <span style={{ fontSize: 11, backgroundColor: c.bg, color: c.color,
+    <span style={{ fontSize: 13, backgroundColor: c.bg, color: c.color,
       padding: "2px 8px", borderRadius: 4, marginLeft: 8, fontWeight: 600 }}>
       {c.label}
     </span>
@@ -436,8 +436,8 @@ export default function TestScraperPage() {
           {!result && !loading && (
             <div style={S.center}>
               <div style={{ fontSize: 52, marginBottom: 12 }}>🐝</div>
-              <div style={{ color: "#475569", fontSize: 15 }}>Esperando consulta…</div>
-              <div style={{ color: "#1e3a5f", fontSize: 12, marginTop: 8, textAlign: "center", maxWidth: 240 }}>
+              <div style={{ color: "#94a3b8", fontSize: 15 }}>Esperando consulta…</div>
+              <div style={{ color: "#64748b", fontSize: 14, marginTop: 8, textAlign: "center", maxWidth: 240 }}>
                 Selecciona tienda → material → presiona el botón
               </div>
             </div>
@@ -449,7 +449,7 @@ export default function TestScraperPage() {
               <div style={{ color: esFD ? "#fbbf24" : "#60a5fa", fontSize: 15, marginTop: 18 }}>
                 {esFD ? "Consultando F&D híbrido…" : "Consultando ScrapingBee…"}
               </div>
-              <div style={{ color: "#475569", fontSize: 12, marginTop: 6 }}>
+              <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 6 }}>
                 {esFD ? "SerpApi URL → ScrapingBee precio (~15 seg)" : "~13-15 seg (2 llamadas)"}
               </div>
             </div>
@@ -462,7 +462,7 @@ export default function TestScraperPage() {
                 {result.error && !result.price_found ? (
                   <>
                     <div style={{ fontSize: 44, color: "#f87171" }}>✕</div>
-                    <div style={{ color: "#f87171", fontSize: 14, marginTop: 8 }}>{result.message || result.error}</div>
+                    <div style={{ color: "#f87171", fontSize: 16, marginTop: 8 }}>{result.message || result.error}</div>
                   </>
                 ) : (
                   <>
@@ -474,7 +474,7 @@ export default function TestScraperPage() {
                       {precioFmt ?? (result.price_found ? "?" : "Sin precio")}
                     </div>
                     <div style={{
-                      fontSize: 14, marginTop: 10,
+                      fontSize: 16, marginTop: 10,
                       color: result.price_strategy === "edlp"             ? "#4ade80"
                            : result.price_strategy === "json-ld-offers"   ? "#4ade80"
                            : result.price_strategy === "json-ld"          ? "#fbbf24"
@@ -484,7 +484,7 @@ export default function TestScraperPage() {
                       {estrategiaLabel(result.price_strategy)}
                     </div>
                     {result.fuente && (
-                      <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
+                      <div style={{ fontSize: 14, color: "#94a3b8", marginTop: 6 }}>
                         {result.fuente}
                       </div>
                     )}
@@ -496,13 +496,13 @@ export default function TestScraperPage() {
               {result.product_title && (
                 <div style={S.productBlock}>
                   <div style={S.blockLabel}>Producto seleccionado</div>
-                  <div style={{ color: "#e2e8f0", fontSize: 14, lineHeight: 1.55, marginBottom: 12 }}>
+                  <div style={{ color: "#e2e8f0", fontSize: 16, lineHeight: 1.55, marginBottom: 12 }}>
                     {result.product_title}
                   </div>
                   <div style={{ display: "flex", gap: 28 }}>
                     {result.match_score != null && result.match_score > 0 && (
                       <div>
-                        <span style={{ color: "#64748b", fontSize: 12 }}>Match score  </span>
+                        <span style={{ color: "#94a3b8", fontSize: 14 }}>Match score  </span>
                         <span style={{ color: scoreColor(result.match_score), fontSize: 22, fontWeight: 700 }}>
                           {result.match_score}
                         </span>
@@ -513,7 +513,7 @@ export default function TestScraperPage() {
                     )}
                     {result.llamadas_scrapingbee != null && (
                       <div>
-                        <span style={{ color: "#64748b", fontSize: 12 }}>Llamadas SB  </span>
+                        <span style={{ color: "#94a3b8", fontSize: 14 }}>Llamadas SB  </span>
                         <span style={{ color: "#94a3b8", fontSize: 22, fontWeight: 700 }}>
                           {result.llamadas_scrapingbee}
                         </span>
@@ -537,8 +537,8 @@ export default function TestScraperPage() {
                   ] as [string, string | null | undefined][]).map(([k, v]) =>
                     v != null ? (
                       <div key={k} style={{ display: "flex", gap: 12 }}>
-                        <span style={{ color: "#64748b", fontSize: 13, minWidth: 148 }}>{k}</span>
-                        <span style={{ color: "#cbd5e1", fontSize: 13 }}>{v}</span>
+                        <span style={{ color: "#94a3b8", fontSize: 15, minWidth: 148 }}>{k}</span>
+                        <span style={{ color: "#cbd5e1", fontSize: 15 }}>{v}</span>
                       </div>
                     ) : null
                   )}
@@ -555,7 +555,7 @@ export default function TestScraperPage() {
                   <div style={{ marginTop: 16 }}>
                     <div style={{ ...S.blockLabel, marginBottom: 6 }}>URL consultada</div>
                     <a href={result.product_url ?? result.url ?? ""} target="_blank" rel="noreferrer"
-                      style={{ fontSize: 12, color: "#60a5fa", wordBreak: "break-all" }}>
+                      style={{ fontSize: 14, color: "#60a5fa", wordBreak: "break-all" }}>
                       {result.product_url ?? result.url}
                     </a>
                   </div>
@@ -624,7 +624,7 @@ const STEP_CFG: Record<string, { icon: string; label: string; bg: string; color:
 };
 
 function renderStepDetail(s: Step): React.ReactNode {
-  const d: React.CSSProperties = { fontSize: 11, color: "#64748b", marginTop: 3, lineHeight: 1.6 };
+  const d: React.CSSProperties = { fontSize: 13, color: "#94a3b8", marginTop: 3, lineHeight: 1.6 };
   const trunc = (str: string, n = 80) => str.length > n ? str.slice(0, n) + "…" : str;
 
   if (s.accion === "busqueda_google_shopping") return (
@@ -707,16 +707,16 @@ function StepsTimeline({ steps }: { steps: Step[] }) {
           <div key={i} style={{ display: "flex", gap: 12 }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
               <div style={{ ...S.timelineDot, backgroundColor: cfg.bg, borderColor: cfg.color }}>
-                <span style={{ fontSize: 9, lineHeight: 1 }}>{cfg.icon}</span>
+                <span style={{ fontSize: 10, lineHeight: 1 }}>{cfg.icon}</span>
               </div>
               {!isLast && <div style={S.timelineConnect} />}
             </div>
             <div style={{ flex: 1, paddingBottom: isLast ? 0 : 14, paddingTop: 1 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 10, color: "#475569" }}>#{step.paso}</span>
-                <span style={{ fontSize: 12, color: cfg.color, fontWeight: 600 }}>{cfg.label}</span>
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>#{step.paso}</span>
+                <span style={{ fontSize: 14, color: cfg.color, fontWeight: 600 }}>{cfg.label}</span>
                 {step.resultado && (
-                  <span style={{ fontSize: 12, color: "#cbd5e1" }}>{step.resultado}</span>
+                  <span style={{ fontSize: 14, color: "#cbd5e1" }}>{step.resultado}</span>
                 )}
               </div>
               {renderStepDetail(step)}
@@ -732,7 +732,7 @@ function StepsTimeline({ steps }: { steps: Step[] }) {
 
 const base: React.CSSProperties = {
   fontFamily: "'DM Mono', 'Fira Code', monospace",
-  fontSize: 14,
+  fontSize: 16,
   backgroundColor: "#0a1628",
   border: "1px solid #1e3a5f",
   borderRadius: 8,
@@ -747,29 +747,29 @@ const S: Record<string, React.CSSProperties> = {
   page:        { minHeight: "100vh", backgroundColor: "#080f1e", color: "#e2e8f0", fontFamily: "'DM Mono','Fira Code',monospace", padding: "2.5rem 2rem" },
   header:      { marginBottom: 28, paddingBottom: 20, borderBottom: "1px solid #1e3a5f" },
   led:         { width: 12, height: 12, borderRadius: "50%", backgroundColor: "#22c55e", boxShadow: "0 0 10px #22c55e66" },
-  headerSub:   { fontSize: 11, color: "#475569", letterSpacing: "0.16em", textTransform: "uppercase" },
+  headerSub:   { fontSize: 13, color: "#94a3b8", letterSpacing: "0.16em", textTransform: "uppercase" },
   h1:          { fontSize: 28, fontWeight: 700, margin: "8px 0 6px", color: "#f8fafc" },
-  headerDesc:  { fontSize: 13, color: "#64748b", lineHeight: 1.6, margin: 0 },
-  errorBanner: { backgroundColor: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8, padding: "12px 16px", color: "#fca5a5", fontSize: 13, marginBottom: 12 },
-  debugBanner: { backgroundColor: "#0a1a10", border: "1px solid #14532d", borderRadius: 8, padding: "10px 16px", color: "#6ee7b7", fontSize: 12, marginBottom: 20, lineHeight: 1.6 },
+  headerDesc:  { fontSize: 15, color: "#94a3b8", lineHeight: 1.6, margin: 0 },
+  errorBanner: { backgroundColor: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8, padding: "12px 16px", color: "#fca5a5", fontSize: 15, marginBottom: 12 },
+  debugBanner: { backgroundColor: "#0a1a10", border: "1px solid #14532d", borderRadius: 8, padding: "10px 16px", color: "#6ee7b7", fontSize: 14, marginBottom: 20, lineHeight: 1.6 },
   grid:        { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, maxWidth: 1100 },
   leftPanel:   { display: "flex", flexDirection: "column", gap: 20 },
   select:      { ...base, cursor: "pointer" },
   input:       { ...base },
-  hint:        { fontSize: 11, color: "#475569", marginTop: 2, lineHeight: 1.5, display: "flex", alignItems: "center" },
-  emptyMsg:    { fontSize: 12, color: "#f87171", backgroundColor: "#1a0808", border: "1px solid #7f1d1d", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6, whiteSpace: "pre-line" },
-  btn:         { flex: 1, padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 700, transition: "all 0.15s" },
-  btnOff:      { padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 600, backgroundColor: "#0f172a", color: "#334155", border: "1px solid #1e293b", cursor: "not-allowed", position: "relative" },
-  pronto:      { position: "absolute", top: -8, right: -8, fontSize: 9, backgroundColor: "#1e293b", color: "#64748b", padding: "2px 6px", borderRadius: 4 },
-  creditBox:   { fontSize: 12, color: "#475569", backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 8, padding: "10px 14px", lineHeight: 1.8 },
+  hint:        { fontSize: 13, color: "#94a3b8", marginTop: 2, lineHeight: 1.5, display: "flex", alignItems: "center" },
+  emptyMsg:    { fontSize: 14, color: "#f87171", backgroundColor: "#1a0808", border: "1px solid #7f1d1d", borderRadius: 8, padding: "10px 14px", lineHeight: 1.6, whiteSpace: "pre-line" },
+  btn:         { flex: 1, padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 16, fontWeight: 700, transition: "all 0.15s" },
+  btnOff:      { padding: "13px 16px", borderRadius: 8, fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 16, fontWeight: 600, backgroundColor: "#0f172a", color: "#64748b", border: "1px solid #1e293b", cursor: "not-allowed", position: "relative" },
+  pronto:      { position: "absolute", top: -8, right: -8, fontSize: 10, backgroundColor: "#1e293b", color: "#94a3b8", padding: "2px 6px", borderRadius: 4 },
+  creditBox:   { fontSize: 14, color: "#94a3b8", backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 8, padding: "10px 14px", lineHeight: 1.8 },
   resultPanel: { backgroundColor: "#0a1628", border: "1px solid #1e3a5f", borderRadius: 12, minHeight: 500, display: "flex", flexDirection: "column", overflow: "hidden" },
   center:      { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40 },
   priceHero:   { textAlign: "center", padding: "36px 24px 28px", borderBottom: "1px solid #1e3a5f", backgroundColor: "#060d1a" },
   productBlock:{ padding: "20px 24px", borderBottom: "1px solid #1e3a5f", backgroundColor: "#080f1e" },
   diagBlock:   { padding: "20px 24px", flex: 1, overflowY: "auto" },
-  blockLabel:  { fontSize: 10, color: "#475569", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 10 },
-  codeBox:     { backgroundColor: "#060d1a", border: "1px solid #1e3a5f", borderRadius: 6, padding: "8px 12px", fontSize: 12, color: "#7dd3fc", wordBreak: "break-all", maxHeight: 80, overflowY: "auto" },
-  warnBox:     { marginTop: 12, fontSize: 13, color: "#fbbf24", backgroundColor: "#1c1500", border: "1px solid #713f12", borderRadius: 6, padding: "10px 12px", lineHeight: 1.5 },
+  blockLabel:  { fontSize: 12, color: "#94a3b8", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 10 },
+  codeBox:     { backgroundColor: "#060d1a", border: "1px solid #1e3a5f", borderRadius: 6, padding: "8px 12px", fontSize: 14, color: "#7dd3fc", wordBreak: "break-all", maxHeight: 80, overflowY: "auto" },
+  warnBox:     { marginTop: 12, fontSize: 15, color: "#fbbf24", backgroundColor: "#1c1500", border: "1px solid #713f12", borderRadius: 6, padding: "10px 12px", lineHeight: 1.5 },
   timelineDot:     { width: 16, height: 16, borderRadius: "50%", border: "2px solid", display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
   timelineConnect: { width: 2, backgroundColor: "#1e3a5f", flex: 1, marginTop: 4, minHeight: 10 } as React.CSSProperties,
 };
