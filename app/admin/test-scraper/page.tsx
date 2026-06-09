@@ -22,6 +22,27 @@ type CatalogoItem = {
   tienda_id: string;
 };
 
+type Top5Item = { titulo: string; score: number; url: string };
+
+type Step = {
+  paso: number;
+  accion: string;
+  resultado?: string;
+  detalle?: string;
+  query?: string;
+  total_resultados?: number;
+  tienda_match?: string;
+  titulo?: string;
+  precio?: number;
+  tiendas_presentes?: string[];
+  url_busqueda?: string;
+  total?: number;
+  top5?: Top5Item[];
+  url?: string;
+  score?: number;
+  estrategia?: string;
+};
+
 type ScraperResult = {
   status?: string;
   precio?: number | null;
@@ -43,6 +64,7 @@ type ScraperResult = {
   message?: string;
   error?: string | null;
   store_detected?: string;
+  steps?: Step[];
 };
 
 // ─── Constantes de tiendas ────────────────────────────────────────────────────
@@ -543,6 +565,10 @@ export default function TestScraperPage() {
                   <div style={S.warnBox}>⚠️ {result.message}</div>
                 )}
               </div>
+
+              {result.steps && result.steps.length > 0 && (
+                <StepsTimeline steps={result.steps} />
+              )}
             </>
           )}
         </div>
@@ -573,6 +599,133 @@ function Skeleton() {
 
 function Spin({ size = 18 }: { size?: number }) {
   return <span style={{ fontSize: size, display: "inline-block", animation: "spin 0.8s linear infinite", lineHeight: 1 }}>⟳</span>;
+}
+
+// ─── Trazabilidad del bot ─────────────────────────────────────────────────────
+
+const STEP_CFG: Record<string, { icon: string; label: string; bg: string; color: string }> = {
+  detect_store:             { icon: "🏪", label: "Tienda detectada",       bg: "#0a1628", color: "#60a5fa" },
+  motor:                    { icon: "⚙",  label: "Motor seleccionado",     bg: "#130d2a", color: "#a78bfa" },
+  busqueda_google_shopping: { icon: "🔍", label: "Google Shopping",        bg: "#0a1628", color: "#38bdf8" },
+  precio_encontrado:        { icon: "✅", label: "Precio encontrado",       bg: "#0a1a10", color: "#4ade80" },
+  sin_match_tienda:         { icon: "⚠",  label: "Sin match en tienda",    bg: "#1c1500", color: "#fbbf24" },
+  llamada_1_busqueda:       { icon: "🐝", label: "SB llamada 1 búsqueda",  bg: "#1a1500", color: "#fbbf24" },
+  candidatos_encontrados:   { icon: "📋", label: "Candidatos",             bg: "#0a1628", color: "#93c5fd" },
+  mejor_match:              { icon: "🎯", label: "Mejor match",             bg: "#0a1a10", color: "#34d399" },
+  llamada_2_producto:       { icon: "🐝", label: "SB llamada 2 producto",  bg: "#1a1500", color: "#fbbf24" },
+  precio_extraido:          { icon: "💰", label: "Precio extraído",         bg: "#0a1a10", color: "#4ade80" },
+  sin_precio:               { icon: "✕",  label: "Sin precio",              bg: "#1a0808", color: "#f87171" },
+  captcha_bloqueado:        { icon: "🚫", label: "Captcha bloqueado",       bg: "#1a0808", color: "#f87171" },
+  excepcion:                { icon: "💥", label: "Excepción",               bg: "#1a0808", color: "#f87171" },
+  modo_fd:                  { icon: "🔀", label: "Modo F&D",                bg: "#1a0d00", color: "#fb923c" },
+  serpapi_site_fd:          { icon: "🔍", label: "SerpApi F&D",             bg: "#1a0d00", color: "#fb923c" },
+  url_producto_encontrada:  { icon: "🔗", label: "URL producto",            bg: "#1a0d00", color: "#fb923c" },
+  _default:                 { icon: "·",  label: "Paso",                    bg: "#0a1628", color: "#64748b" },
+};
+
+function renderStepDetail(s: Step): React.ReactNode {
+  const d: React.CSSProperties = { fontSize: 11, color: "#64748b", marginTop: 3, lineHeight: 1.6 };
+  const trunc = (str: string, n = 80) => str.length > n ? str.slice(0, n) + "…" : str;
+
+  if (s.accion === "busqueda_google_shopping") return (
+    <div style={d}>
+      {s.query && <>Query: <span style={{ color: "#7dd3fc" }}>"{s.query}"</span></>}
+      {s.total_resultados != null && <span style={{ marginLeft: 8 }}>· {s.total_resultados} resultados</span>}
+    </div>
+  );
+
+  if (s.accion === "precio_encontrado") return (
+    <div style={d}>
+      {s.precio != null && <span style={{ color: "#4ade80", fontWeight: 600 }}>${s.precio.toFixed(2)}</span>}
+      {s.tienda_match && <span style={{ marginLeft: 8 }}>· {s.tienda_match}</span>}
+      {s.titulo && <div style={{ ...d, marginTop: 1 }}>{trunc(s.titulo, 70)}</div>}
+    </div>
+  );
+
+  if (s.accion === "sin_match_tienda" && s.tiendas_presentes?.length) return (
+    <div style={d}>Presentes: {s.tiendas_presentes.join(", ")}</div>
+  );
+
+  if (s.accion === "llamada_1_busqueda" && s.url_busqueda) return (
+    <div style={{ ...d, wordBreak: "break-all" }}>{trunc(s.url_busqueda)}</div>
+  );
+
+  if (s.accion === "candidatos_encontrados") return (
+    <div style={d}>
+      {s.total != null && <span>{s.total} candidatos</span>}
+      {s.top5?.length ? (
+        <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+          {s.top5.map((c, i) => (
+            <div key={i} style={{ display: "flex", gap: 6 }}>
+              <span style={{ color: scoreColor(c.score), fontWeight: 600, minWidth: 14 }}>{c.score}</span>
+              <span style={{ color: "#94a3b8" }}>{trunc(c.titulo, 60)}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+
+  if (s.accion === "mejor_match") return (
+    <div style={d}>
+      {s.score != null && <span style={{ color: scoreColor(s.score), fontWeight: 600 }}>score {s.score}</span>}
+      {s.titulo && <span style={{ marginLeft: 8, color: "#94a3b8" }}>{trunc(s.titulo, 60)}</span>}
+    </div>
+  );
+
+  if (s.accion === "llamada_2_producto" && s.url) return (
+    <div style={{ ...d, wordBreak: "break-all" }}>{trunc(s.url)}</div>
+  );
+
+  if (s.accion === "precio_extraido") return (
+    <div style={d}>
+      {s.precio != null && <span style={{ color: "#4ade80", fontWeight: 600 }}>${s.precio.toFixed(2)}</span>}
+      {s.estrategia && <span style={{ marginLeft: 8 }}>· <span style={{ color: "#7dd3fc" }}>{s.estrategia}</span></span>}
+    </div>
+  );
+
+  if (s.accion === "serpapi_site_fd" && s.query) return (
+    <div style={d}>Query: <span style={{ color: "#7dd3fc" }}>"{s.query}"</span></div>
+  );
+
+  if (s.accion === "url_producto_encontrada" && s.url) return (
+    <div style={{ ...d, wordBreak: "break-all", color: "#fb923c" }}>{trunc(s.url)}</div>
+  );
+
+  if (s.detalle) return <div style={d}>{s.detalle}</div>;
+  return null;
+}
+
+function StepsTimeline({ steps }: { steps: Step[] }) {
+  return (
+    <div style={{ padding: "20px 24px", borderTop: "1px solid #1e3a5f" }}>
+      <div style={S.blockLabel}>Trazabilidad del bot</div>
+      {steps.map((step, i) => {
+        const cfg = STEP_CFG[step.accion] ?? STEP_CFG._default;
+        const isLast = i === steps.length - 1;
+        return (
+          <div key={i} style={{ display: "flex", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+              <div style={{ ...S.timelineDot, backgroundColor: cfg.bg, borderColor: cfg.color }}>
+                <span style={{ fontSize: 9, lineHeight: 1 }}>{cfg.icon}</span>
+              </div>
+              {!isLast && <div style={S.timelineConnect} />}
+            </div>
+            <div style={{ flex: 1, paddingBottom: isLast ? 0 : 14, paddingTop: 1 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 10, color: "#475569" }}>#{step.paso}</span>
+                <span style={{ fontSize: 12, color: cfg.color, fontWeight: 600 }}>{cfg.label}</span>
+                {step.resultado && (
+                  <span style={{ fontSize: 12, color: "#cbd5e1" }}>{step.resultado}</span>
+                )}
+              </div>
+              {renderStepDetail(step)}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -617,4 +770,6 @@ const S: Record<string, React.CSSProperties> = {
   blockLabel:  { fontSize: 10, color: "#475569", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 10 },
   codeBox:     { backgroundColor: "#060d1a", border: "1px solid #1e3a5f", borderRadius: 6, padding: "8px 12px", fontSize: 12, color: "#7dd3fc", wordBreak: "break-all", maxHeight: 80, overflowY: "auto" },
   warnBox:     { marginTop: 12, fontSize: 13, color: "#fbbf24", backgroundColor: "#1c1500", border: "1px solid #713f12", borderRadius: 6, padding: "10px 12px", lineHeight: 1.5 },
+  timelineDot:     { width: 16, height: 16, borderRadius: "50%", border: "2px solid", display: "flex", alignItems: "center", justifyContent: "center" } as React.CSSProperties,
+  timelineConnect: { width: 2, backgroundColor: "#1e3a5f", flex: 1, marginTop: 4, minHeight: 10 } as React.CSSProperties,
 };

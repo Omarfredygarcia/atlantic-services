@@ -18,6 +18,9 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: 'Atlantic Services | General Construction Indianapolis',
   description: 'Professional construction, flooring, painting, restoration and more in Indianapolis, Indiana.',
+  icons: {
+    icon: '/images/Logo-transparent.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
