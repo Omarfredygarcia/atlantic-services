@@ -418,7 +418,7 @@ export default function TestScraperPage() {
               disabled={!canRun} onClick={run}>
               {loading
                 ? <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}><Spin />Consultando…</span>
-                : esFD ? "🔀 Probar F&D Híbrido" : "🐝 Probar ScrapingBee"}
+                : esFD ? "🔀 Probar F&D Híbrido" : storeMode === "serpapi" ? "🔍 Probar SerpApi" : "🐝 Probar ScrapingBee"}
             </button>
           </div>
 
