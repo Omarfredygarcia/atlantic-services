@@ -278,7 +278,7 @@ export default function TestScraperPage() {
       const qs = new URLSearchParams({
         base_url: searchUrl || tiendaActual?.url || "",
         term,
-        modo: "scrapingbee",
+        modo: storeMode === "serpapi" ? "serpapi" : "scrapingbee",
         debug: "1",
       });
       const res = await fetch(`${RAILWAY_BASE}/test-scraper?${qs}`, { cache: "no-store" });
