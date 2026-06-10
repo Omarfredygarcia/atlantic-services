@@ -47,7 +47,8 @@ app/
 ## Estado actual del test-scraper (sandbox)
 - 4 tiendas detectadas desde Supabase (filtro por nombre: menards, floor, home depot, lowe)
 - Dropdown de catálogo carga items por tienda seleccionada, pre-carga search_query en el campo term
-- Campo "URL de búsqueda" visible y editable para **todas** las tiendas (incluyendo F&D)
+- Campo "URL de búsqueda" visible y editable para todas las tiendas (incluyendo F&D)
+- Favicon cambiado a `public/images/Logo-transparent.png` via `app/icon.png` (Next.js App Router)
 
 ### Lógica de construcción de URL de búsqueda
 Al seleccionar material o editar el campo Search Query:
@@ -66,7 +67,7 @@ Al seleccionar material o editar el campo Search Query:
 ```
 base_url  = searchUrl construida (o URL directa si aplica)
 term      = search_query text (o URL si se escribió una)
-modo      = "scrapingbee"
+modo      = "serpapi" | "scrapingbee"   ← se determina por storeMode
 debug     = "1"
 ```
 
@@ -81,9 +82,21 @@ const STORE_SEARCH_URLS = {
 ```
 
 ### Modos de scraping por tienda
-- **Home Depot / Lowe's** → SerpApi directo
-- **Menards** → ScrapingBee (2 llamadas)
-- **Floor & Decor** → Híbrido (Modo A o B según `base_url`)
+- **Home Depot / Lowe's** → SerpApi (`modo=serpapi`) — botón "🔍 Probar SerpApi"
+- **Menards** → ScrapingBee 2 llamadas (`modo=scrapingbee`) — botón "🐝 Probar ScrapingBee"
+- **Floor & Decor** → Híbrido (`modo=scrapingbee`, backend decide Modo A o B) — botón "🔀 Probar F&D Híbrido"
+
+### Trazabilidad del bot (steps[])
+- El backend retorna `steps[]` en el response del `/test-scraper`
+- El frontend renderiza un timeline vertical con ícono, label, resultado y detalle por paso
+- Acciones soportadas: `detect_store`, `motor`, `busqueda_google_shopping`, `precio_encontrado`, `sin_match_tienda`, `llamada_1_busqueda`, `candidatos_encontrados`, `mejor_match`, `llamada_2_producto`, `precio_extraido`, `sin_precio`, `captcha_bloqueado`, `excepcion`, `modo_fd`, `serpapi_site_fd`, `url_producto_encontrada`
+- Si el backend no retorna `steps`, la sección no aparece (backward compatible)
+
+### Pruebas realizadas (confirmadas ✅ / pendientes ⏳)
+- **Home Depot** ✅ — SerpApi funcionando, precio $49.95, match score 5, trazabilidad correcta
+- **Lowe's** ⏳ — pendiente de probar
+- **Menards** ⏳ — pendiente de probar
+- **Floor & Decor** ⏳ — pendiente de probar
 
 ## Bugs conocidos
 - Constraint `linea` NOT NULL — fix listo pero pendiente de ejecutar
@@ -93,5 +106,5 @@ const STORE_SEARCH_URLS = {
 - Resend API key configurada
 
 ## Convención de deploy
-- Push a main → Vercel despliega automáticamente
+- Push a main → Vercel despliega automáticamente (Git integration, NO usar Vercel CLI)
 - Backend scraper corre en Railway (URL en `NEXT_PUBLIC_RAILWAY_RPA_URL`)
