@@ -44,59 +44,55 @@ app/
 - Tiendas en dropdown: Home Depot, Lowe's, Menards, Floor & Decor
 - Richard's Supply **eliminado** del alcance definitivamente
 
-## Estado actual del test-scraper (sandbox)
-- 4 tiendas detectadas desde Supabase (filtro por nombre: menards, floor, home depot, lowe)
-- Dropdown de catálogo carga items por tienda seleccionada, pre-carga search_query en el campo term
-- Campo "URL de búsqueda" visible y editable para todas las tiendas (incluyendo F&D)
-- Favicon cambiado a `public/images/Logo-transparent.png` via `app/icon.png` (Next.js App Router)
+## Estado actual del test-scraper (sandbox) — refactorizado Junio 2026
 
-### Lógica de construcción de URL de búsqueda
-Al seleccionar material o editar el campo Search Query:
-- Si el valor **empieza con `http`** → se usa directamente como `base_url` (URL de producto)
-- Si es **texto** → se construye `/search?q=<encoded>` usando constantes por tienda
-
-### Modos F&D (Floor & Decor)
-| Modo | `base_url` enviado al backend | Flujo backend |
-|---|---|---|
-| **A** ✅ | URL directa de producto (`/aquaguard.../product.html`) | ScrapingBee directo, 0 SerpApi |
-| **B** | `/search?q=<término>` | SerpApi primero → puede fallar si Google no indexa |
-
-**Para producción:** el campo `search_query` en Supabase para ítems F&D debe guardar la URL directa del producto (no texto descriptivo). Así el Modo A entra automáticamente en el flujo real `/procesar`.
+### Arquitectura nueva (post-refactor)
+El frontend NO construye URLs ni determina el flujo. Solo pasa parámetros al backend.
 
 ### Parámetros enviados al backend Railway (`/test-scraper`)
 ```
-base_url  = searchUrl construida (o URL directa si aplica)
-term      = search_query text (o URL si se escribió una)
-modo      = "serpapi" | "scrapingbee"   ← se determina por storeMode
-debug     = "1"
+search_query = texto del material a buscar
+store_name   = nombre exacto de la tienda (ej: "Home Depot", "All Stores")
+store_zip    = ZIP de la sucursal (opcional, ej: "46204")
+modo         = "serpapi" | "scrapingbee"   ← el usuario elige en el toggle
+debug        = "1"
 ```
 
-### Constantes de URL base por tienda (en page.tsx)
-```typescript
-const STORE_SEARCH_URLS = {
-  "homedepot":     "https://www.homedepot.com/s/",
-  "lowes":         "https://www.lowes.com/search?searchTerm=",
-  "menards":       "https://www.menards.com/main/search.html?search=",
-  "flooranddecor": "https://www.flooranddecor.com/search?q=",
-}
-```
+### UI del sandbox
+- Dropdown carga **todas** las tiendas activas de BD — sin filtro por nombre
+- "All Stores" aparece primero en el dropdown
+- Input de ZIP (se pre-carga desde campo `store_zip` de la tabla `tiendas`)
+- Toggle motor: SerpApi (azul) / ScrapingBee (verde)
+- Catálogo se oculta cuando se selecciona "All Stores"
+- Favicon: `public/images/Logo-transparent.png` via `app/icon.png`
 
-### Modos de scraping por tienda
-- **Home Depot / Lowe's** → SerpApi (`modo=serpapi`) — botón "🔍 Probar SerpApi"
-- **Menards** → ScrapingBee 2 llamadas (`modo=scrapingbee`) — botón "🐝 Probar ScrapingBee"
-- **Floor & Decor** → Híbrido (`modo=scrapingbee`, backend decide Modo A o B) — botón "🔀 Probar F&D Híbrido"
+### Badges de resultado
+| Situación | Badge |
+|---|---|
+| score ≥ 5 | 🟢 PRECIO CONFIABLE |
+| score 3-4 | 🟡 ⚠ BAJA SIMILITUD |
+| score < 3 | 🔴 VERIFICAR |
+| price_strategy = "not_implemented" | 🟠 EN DESARROLLO |
+| error contiene "indexado" | 🟡 SIN DATOS |
+| price_strategy = "cache" | 🔵 CACHÉ 24h |
+| error genérico | 🔴 ERROR |
+
+### All Stores
+- Cuando se selecciona "All Stores" → muestra tabla comparativa de tiendas
+- Backend retorna `comparison[]` con `{ store, precio, product_title, match_score, winner }`
+- Fila ganadora resaltada en verde con ★
 
 ### Trazabilidad del bot (steps[])
-- El backend retorna `steps[]` en el response del `/test-scraper`
-- El frontend renderiza un timeline vertical con ícono, label, resultado y detalle por paso
+- El backend retorna `steps[]` — se renderiza timeline vertical
 - Acciones soportadas: `detect_store`, `motor`, `busqueda_google_shopping`, `precio_encontrado`, `sin_match_tienda`, `llamada_1_busqueda`, `candidatos_encontrados`, `mejor_match`, `llamada_2_producto`, `precio_extraido`, `sin_precio`, `captcha_bloqueado`, `excepcion`, `modo_fd`, `serpapi_site_fd`, `url_producto_encontrada`
 - Si el backend no retorna `steps`, la sección no aparece (backward compatible)
 
 ### Pruebas realizadas (confirmadas ✅ / pendientes ⏳)
-- **Home Depot** ✅ — SerpApi funcionando, precio $49.95, match score 5, trazabilidad correcta
+- **Home Depot** ⏳ — pendiente post-refactor (antes funcionaba: $49.95, score 5)
 - **Lowe's** ⏳ — pendiente de probar
 - **Menards** ⏳ — pendiente de probar
 - **Floor & Decor** ⏳ — pendiente de probar
+- **All Stores** ⏳ — pendiente de probar
 
 ## Bugs conocidos
 - Constraint `linea` NOT NULL — fix listo pero pendiente de ejecutar
