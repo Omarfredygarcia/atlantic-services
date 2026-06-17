@@ -9,11 +9,12 @@ interface Tienda {
   nombre: string
   url: string
   store_zip: string | null
+  store_id: string | null
   activo: boolean
   created_at?: string
 }
 
-const EMPTY = { nombre: '', url: '', store_zip: '', activo: true }
+const EMPTY = { nombre: '', url: '', store_zip: '', store_id: '', activo: true }
 
 export default function TiendasPage() {
   const router = useRouter()
@@ -75,7 +76,7 @@ export default function TiendasPage() {
   function abrirNuevo() { setEditing(null); setForm({ ...EMPTY }); setModal(true) }
   function abrirEditar(item: Tienda) {
     setEditing(item)
-    setForm({ nombre: item.nombre, url: item.url || '', store_zip: item.store_zip || '', activo: item.activo })
+    setForm({ nombre: item.nombre, url: item.url || '', store_zip: item.store_zip || '', store_id: item.store_id || '', activo: item.activo })
     setModal(true)
   }
   function cerrarModal() { setModal(false); setEditing(null) }
@@ -117,7 +118,7 @@ export default function TiendasPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#C9A84C]">
-                {['Nombre', 'URL', 'ZIP', 'Estado', 'Acciones'].map(h => (
+                {['Nombre', 'URL', 'ZIP', 'Store ID', 'Estado', 'Acciones'].map(h => (
                   <th key={h} className="text-black font-bold text-xs px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
@@ -135,6 +136,9 @@ export default function TiendasPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-300 text-xs font-mono">
                     {item.store_zip || <span className="text-gray-600">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-gray-300 text-xs font-mono">
+                    {item.store_id || <span className="text-gray-600">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <button onClick={() => toggleActivo(item)}
@@ -184,10 +188,19 @@ export default function TiendasPage() {
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">
                   ZIP de la sucursal
-                  <span className="text-gray-600 ml-2 font-normal">(usado por el RPA para precios locales)</span>
+                  <span className="text-gray-600 ml-2 font-normal">(precios locales del RPA)</span>
                 </label>
                 <input value={form.store_zip} onChange={e => setForm({ ...form, store_zip: e.target.value })}
                   placeholder="46204" maxLength={10}
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm font-mono" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs mb-1 block">
+                  Store ID
+                  <span className="text-gray-600 ml-2 font-normal">(ID interno — ej: Menards sucursal)</span>
+                </label>
+                <input value={form.store_id} onChange={e => setForm({ ...form, store_id: e.target.value })}
+                  placeholder="3337" maxLength={20}
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm font-mono" />
               </div>
               <div className="flex items-center gap-3">

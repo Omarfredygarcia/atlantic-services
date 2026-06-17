@@ -452,54 +452,21 @@ export default function CatalogoPage() {
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
               </div>
 
-              {/* ── NUEVO: Origen del precio ────────────────────────────────── */}
+              {/* Origen del precio */}
               <div className="col-span-2">
                 <label className="text-gray-400 text-xs mb-1 block">
                   Origen del Precio *
-                  <span className="text-gray-600 ml-2 font-normal">
-                    (define cómo el RPA obtiene el precio de este material)
-                  </span>
+                  <span className="text-gray-600 ml-2 font-normal">(cómo el RPA obtiene el precio)</span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PRECIO_SOURCE_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setForm({ ...form, precio_source: opt.value })}
-                      className={`text-left px-3 py-2 rounded-lg border text-xs transition-colors ${
-                        form.precio_source === opt.value
-                          ? 'border-[#C9A84C] bg-[#C9A84C]/10 text-white'
-                          : 'border-[#333] bg-[#252525] text-gray-400 hover:border-[#555]'
-                      }`}>
-                      <span className={`font-bold block ${opt.color}`}>
-                        {opt.value.toUpperCase()}
-                      </span>
-                      <span className="text-gray-500 text-[10px]">
-                        {opt.label.split('—')[1]?.trim()}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                {/* Hint contextual según el source seleccionado */}
-                {form.precio_source === 'fixed' && (
-                  <p className="text-blue-400 text-[11px] mt-1">
-                    💡 El RPA usará el Precio Base de este registro. Asegúrate de que sea correcto.
-                  </p>
-                )}
-                {form.precio_source === 'manual' && (
-                  <p className="text-yellow-400 text-[11px] mt-1">
-                    💡 El usuario ingresa el precio al crear el material en el proyecto.
-                  </p>
-                )}
-                {form.precio_source === 'serpapi' && (
-                  <p className="text-green-400 text-[11px] mt-1">
-                    💡 El RPA consultará Google Shopping. Usa Search Query para mayor precisión.
-                  </p>
-                )}
-                {form.precio_source === 'scrapingbee' && (
-                  <p className="text-purple-400 text-[11px] mt-1">
-                    💡 Scraping directo al sitio de la tienda. Requiere SCRAPINGBEE_ENABLED=true en Railway.
-                  </p>
-                )}
+                <select
+                  value={form.precio_source}
+                  onChange={e => setForm({ ...form, precio_source: e.target.value })}
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
+                  <option value="fixed">fixed — precio fijo de BD</option>
+                  <option value="manual">manual — ingresado por usuario</option>
+                  <option value="serpapi">serpapi — Google Shopping</option>
+                  <option value="scrapingbee">scrapingbee — scraping directo</option>
+                </select>
               </div>
 
               {/* Search Query */}
