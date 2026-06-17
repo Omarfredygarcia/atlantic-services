@@ -40,9 +40,20 @@ app/
 - **64 sin search_query** — el RPA usa nombre del material como búsqueda
 - Columna "Origen Precio" con badges: FIXED / MANUAL / SERPAPI / SCRAPINGBEE
 - Filtro por precio_source funcional
-- Modal nuevo/editar con selector visual de origen (4 botones)
-- Tiendas en dropdown: Home Depot, Lowe's, Menards, Floor & Decor
+- Modal nuevo/editar: `precio_source` como `<select>` estándar (fixed/manual/serpapi/scrapingbee)
+- Tiendas en dropdown: Home Depot, Lowe's, Menards, Floor & Decor, All Stores
 - Richard's Supply **eliminado** del alcance definitivamente
+
+## Estado actual del admin/catalogo/tiendas
+- CRUD completo de tiendas
+- Campos en tabla y modal:
+  - `nombre` — nombre de la tienda
+  - `url` — sitio web
+  - `store_zip` — ZIP de la sucursal (ej: 46204 para Indianapolis) — usado por RPA
+  - `store_id` — ID interno de sucursal (ej: 3337 para Menards) — usado por RPA
+  - `activo` — toggle
+- ZIPs de Indianapolis a configurar (confirmar con cliente):
+  - Home Depot: 46204 · Lowe's: 46204 · Menards: 46032 · Floor & Decor: 46240
 
 ## Estado actual del test-scraper (sandbox) — refactorizado Junio 2026
 
@@ -96,6 +107,12 @@ debug        = "1"
 
 ## Bugs conocidos
 - Constraint `linea` NOT NULL — fix listo pero pendiente de ejecutar
+
+## Sesión Junio 2026 — cambios aplicados
+- **test-scraper refactorizado:** frontend ya no construye URLs ni determina flujo por tienda. Solo pasa `search_query`, `store_name`, `store_zip`, `modo` al backend Railway.
+- **test-scraper UI:** todas las tiendas desde BD (sin filtro), All Stores primero, toggle SerpApi/ScrapingBee, badges de estado, tabla comparativa para All Stores.
+- **catalogo modal:** `precio_source` cambiado de 4 botones visuales a `<select>` estándar — ya no se pierde al editar.
+- **tiendas CRUD:** agregados campos `store_zip` y `store_id` en tabla y modal.
 
 ## Variables de entorno Vercel
 - Supabase URL + anon key configuradas
