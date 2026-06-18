@@ -140,27 +140,52 @@ function MaterialRow({
         {precioBase ? `$${Number(precioBase).toFixed(2)}` : '—'}
       </td>
 
-      <td className="px-3 py-2 text-green-400 text-sm text-right">
-        {mat.precio_unitario ? `$${mat.precio_unitario.toFixed(2)}` : '—'}
+      <td className="px-3 py-2">
+        <input
+          type="number"
+          value={mat.precio_unitario ?? ''}
+          onChange={e => onUpdate('precio_unitario', parseFloat(e.target.value) || 0)}
+          className="w-24 bg-[#252525] text-green-300 border border-[#333] rounded px-2 py-1 text-sm text-right"
+          placeholder="$ override"
+          title="Precio para esta cotización (no afecta el default del catálogo)"
+          min="0"
+          step="0.01"
+        />
+      </td>
+
+      <td className="px-3 py-2">
+        <input
+          type="number"
+          value={mat.desperdicio_pct ?? ''}
+          onChange={e => onUpdate('desperdicio_pct', parseFloat(e.target.value) || 0)}
+          className="w-16 bg-[#252525] text-white border border-[#333] rounded px-2 py-1 text-sm text-right"
+          placeholder="%"
+          title="Desperdicio para esta cotización"
+          min="0"
+          step="0.1"
+        />
+      </td>
+
+      <td className="px-3 py-2">
+        <input
+          type="number"
+          value={mat.mano_obra_pct ?? ''}
+          onChange={e => onUpdate('mano_obra_pct', parseFloat(e.target.value) || 0)}
+          className="w-16 bg-[#252525] text-white border border-[#333] rounded px-2 py-1 text-sm text-right"
+          placeholder="%"
+          title="Mano de obra para esta cotización"
+          min="0"
+          step="0.1"
+        />
+      </td>
+
+      <td className="px-3 py-2 text-gray-400 text-sm text-right">
+        {mat.cantidad_total ?? '—'}
       </td>
 
       <td className="px-3 py-2 text-green-400 text-sm text-right font-medium">
         {mat.costo_material ? `$${mat.costo_material.toFixed(2)}` : '—'}
       </td>
-
-      {itemSeleccionado?.precio_source === 'manual' && (
-        <td className="px-3 py-2">
-          <input
-            type="number"
-            value={mat.precio_unitario || ''}
-            onChange={e => onUpdate('precio_unitario', parseFloat(e.target.value) || 0)}
-            className="w-24 bg-[#333] text-yellow-300 border border-yellow-700 rounded px-2 py-1 text-sm"
-            placeholder="$ precio"
-            min="0"
-            step="0.01"
-          />
-        </td>
-      )}
 
       <td className="px-3 py-2 text-center">
         <button
@@ -186,10 +211,12 @@ export default function ProyectoFormPage() {
     fecha_creacion: new Date().toISOString().split('T')[0],
   })
   const [materiales, setMateriales] = useState<Partial<Material>[]>([])
+  const [materialesOriginalIds, setMaterialesOriginalIds] = useState<Set<string>>(new Set())
   const [catalogo,   setCatalogo]   = useState<CatalogoItem[]>([])
   const [categorias, setCategorias] = useState<CategoriaRef[]>([])
   const [loading,    setLoading]    = useState(false)
   const [guardando,  setGuardando]  = useState(false)
+  const [regenerando,setRegenerando]= useState(false)
   const [msg,        setMsg]        = useState('')
 
   useEffect(() => {
@@ -250,7 +277,10 @@ export default function ProyectoFormPage() {
     if (proy) setProyecto(proy)
     const { data: mats } = await supabase
       .from('materiales').select('*').eq('proyecto_id', params.id).order('linea')
-    if (mats) setMateriales(mats)
+    if (mats) {
+      setMateriales(mats)
+      setMaterialesOriginalIds(new Set(mats.map((m: Material) => m.id)))
+    }
     setLoading(false)
   }
 
@@ -272,10 +302,10 @@ export default function ProyectoFormPage() {
     )
   }
 
-  async function guardar() {
+  async function guardar(redirect = true) {
     if (!proyecto.cliente_nombre || !proyecto.cliente_email) {
       setMsg('❌ Nombre y email del cliente son obligatorios')
-      return
+      return false
     }
     setGuardando(true)
     setMsg('')
@@ -328,7 +358,7 @@ export default function ProyectoFormPage() {
         }
 
         setMsg('✅ Proyecto creado. Ve al Dashboard y corre el RPA.')
-        setTimeout(() => router.push('/admin/dashboard'), 2000)
+        if (redirect) setTimeout(() => router.push('/admin/dashboard'), 2000)
 
       } else {
         const { error } = await supabase.from('proyectos').update({
@@ -343,12 +373,40 @@ export default function ProyectoFormPage() {
 
         if (error) throw error
 
-        await supabase.from('materiales').delete().eq('proyecto_id', proyectoId)
+        // Filas que ya existían y el usuario quitó con ✕ → borrar solo esas
+        const idsActuales = new Set(materiales.map(m => m.id).filter(Boolean))
+        const idsABorrar  = [...materialesOriginalIds].filter(id => !idsActuales.has(id))
+        if (idsABorrar.length > 0) {
+          const { error: delError } = await supabase.from('materiales').delete().in('id', idsABorrar)
+          if (delError) throw delError
+        }
 
-        const matsValidos = materiales.filter(m => m.catalogo_id && m.categoria_id)
-        if (matsValidos.length > 0) {
-          const { error: matError } = await supabase.from('materiales').insert(
-            matsValidos.map(m => ({
+        // Filas existentes → UPDATE puntual (nunca toca campos calculados por el RPA)
+        const existentes = materiales.filter(m => m.id && m.catalogo_id && m.categoria_id)
+        for (const m of existentes) {
+          const { error: updError } = await supabase.from('materiales').update({
+            catalogo_id:      m.catalogo_id,
+            categoria_id:     m.categoria_id,
+            tienda_id:        m.tienda_id,
+            unidad_id:        m.unidad_id,
+            categoria:        m.categoria,
+            material:         m.material,
+            area_ft2:         m.area_ft2 || 0,
+            unidad:           m.unidad || '',
+            tienda_preferida: m.tienda_preferida,
+            search_query:     m.search_query,
+            desperdicio_pct:  m.desperdicio_pct,
+            mano_obra_pct:    m.mano_obra_pct,
+            precio_unitario:  m.precio_unitario || null,
+          }).eq('id', m.id)
+          if (updError) throw updError
+        }
+
+        // Filas nuevas (agregadas con "+ Agregar") → INSERT
+        const nuevos = materiales.filter(m => !m.id && m.catalogo_id && m.categoria_id)
+        if (nuevos.length > 0) {
+          const { data: insertados, error: insError } = await supabase.from('materiales').insert(
+            nuevos.map(m => ({
               proyecto_id:      proyectoId,
               linea:            m.linea,
               catalogo_id:      m.catalogo_id,
@@ -365,17 +423,21 @@ export default function ProyectoFormPage() {
               mano_obra_pct:    m.mano_obra_pct,
               precio_unitario:  m.precio_unitario || null,
             }))
-          )
-          if (matError) throw matError
+          ).select()
+          if (insError) throw insError
+          if (insertados) setMaterialesOriginalIds(prev => new Set([...prev, ...insertados.map((r: Material) => r.id)]))
         }
 
         setMsg('✅ Proyecto actualizado correctamente.')
-        setTimeout(() => router.push('/admin/dashboard'), 1500)
+        if (redirect) setTimeout(() => router.push('/admin/dashboard'), 1500)
       }
+      setGuardando(false)
+      return true
     } catch (e: any) {
       setMsg(`❌ Error: ${e.message}`)
+      setGuardando(false)
+      return false
     }
-    setGuardando(false)
   }
 
   async function resetear() {
@@ -389,6 +451,33 @@ export default function ProyectoFormPage() {
     }).eq('id', params.id)
     setMsg('✅ Proyecto reseteado a PENDIENTE')
     cargarProyecto()
+  }
+
+  async function regenerar() {
+    const proyectoId = params?.id as string
+    setRegenerando(true)
+    setMsg('Guardando cambios...')
+
+    const guardadoOk = await guardar(false)
+    if (!guardadoOk) {
+      setRegenerando(false)
+      return
+    }
+
+    setMsg('Regenerando PDF y Excel...')
+    try {
+      const res = await fetch(`/api/proyectos/${proyectoId}/regenerar`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        setMsg(`✅ ${data.mensaje || 'Cotización regenerada'}`)
+        cargarProyecto()
+      } else {
+        setMsg(`❌ Error: ${data.error || 'No se pudo regenerar la cotización'}`)
+      }
+    } catch (e: any) {
+      setMsg(`❌ Error al conectar con el servidor RPA: ${e.message}`)
+    }
+    setRegenerando(false)
   }
 
   const totalMateriales = materiales.reduce((s, m) => s + (m.costo_material || 0), 0)
@@ -509,10 +598,10 @@ export default function ProyectoFormPage() {
           )}
 
           <div className="bg-[#1C1C1C] rounded-xl border border-[#333] overflow-x-auto">
-            <table className="w-full min-w-[900px]">
+            <table className="w-full min-w-[1300px]">
               <thead>
                 <tr className="bg-[#C9A84C]">
-                  {['#', 'Categoría', 'Material', 'Cant / Área', 'Tienda', 'Fuente', 'Precio Cat.', 'Precio RPA', 'Costo Total', ''].map(h => (
+                  {['#', 'Categoría', 'Material', 'Cant / Área', 'Tienda', 'Fuente', 'Precio Cat.', 'Precio (cotización)', 'Desperdicio %', 'M. Obra %', 'Cantidad', 'Costo Total', ''].map(h => (
                     <th key={h} className="text-black font-bold text-xs px-3 py-2 text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -520,7 +609,7 @@ export default function ProyectoFormPage() {
               <tbody>
                 {materiales.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-center text-gray-500 py-8 text-sm">
+                    <td colSpan={13} className="text-center text-gray-500 py-8 text-sm">
                       No hay materiales — haz click en "+ Agregar"
                     </td>
                   </tr>
@@ -565,7 +654,7 @@ export default function ProyectoFormPage() {
 
         <div className="flex gap-3">
           <button
-            onClick={guardar}
+            onClick={() => guardar()}
             disabled={guardando}
             className="bg-[#C9A84C] hover:bg-[#C97B10] disabled:bg-gray-600 text-black font-bold px-8 py-3 rounded-lg"
           >
@@ -577,6 +666,32 @@ export default function ProyectoFormPage() {
           >
             ✕ Cancelar
           </button>
+          {!isNuevo && proyecto.estado === 'COTIZADO' && (
+            <button
+              onClick={regenerar}
+              disabled={regenerando}
+              title="Guarda los ajustes de esta cotización y regenera el PDF/Excel sin volver a buscar precios"
+              className="bg-[#5BB8D4] hover:bg-[#4AA0BB] disabled:bg-gray-600 text-black font-bold px-6 py-3 rounded-lg"
+            >
+              {regenerando ? '⏳ Regenerando...' : '🔄 Regenerar Cotización'}
+            </button>
+          )}
+          {!isNuevo && proyecto.pdf_path && (
+            <button
+              onClick={() => window.open(`/api/proyectos/${params.id}/pdf`, '_blank')}
+              className="bg-red-800 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-lg"
+            >
+              ↓ PDF
+            </button>
+          )}
+          {!isNuevo && proyecto.excel_path && (
+            <button
+              onClick={() => window.open(`/api/proyectos/${params.id}/excel`, '_blank')}
+              className="bg-green-700 hover:bg-green-600 text-white font-bold px-4 py-3 rounded-lg"
+            >
+              ↓ Excel
+            </button>
+          )}
           {!isNuevo && (
             <button
               onClick={resetear}
