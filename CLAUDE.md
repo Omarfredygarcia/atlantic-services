@@ -105,14 +105,37 @@ debug        = "1"
 - **Floor & Decor** ⏳ — pendiente de probar
 - **All Stores** ⏳ — pendiente de probar
 
+## Estado actual de admin/proyectos/[id] — flujo de re-cotización (desde 2026-06-18)
+Backend agregó `POST /regenerar-documentos` `{ "proyecto_id": "<uuid>" }` — recalcula `costo_material`/`costo_mano_obra`/`cantidad_total` y regenera PDF+Excel **sin llamar SerpApi/ScrapingBee** (no consume créditos). Ya desplegado en Railway.
+
+- **Endpoint proxy nuevo:** `app/api/proyectos/[id]/regenerar/route.ts` → reenvía al RPA.
+- **`guardar()` ya no hace DELETE+INSERT de todos los materiales.** Ahora: `UPDATE` puntual por `id` en filas existentes (nunca toca `cantidad_total`, `costo_material`, `costo_mano_obra`, `fuente_precio`, `fecha_precio` — esos quedan intactos hasta que el RPA o `/regenerar-documentos` los recalculen), `INSERT` solo de filas agregadas con "+ Agregar", `DELETE` solo de las que el usuario quitó con ✕.
+- **`MaterialRow` — campos editables ampliados:** `precio_unitario` ahora editable para cualquier `precio_source` (antes solo si era `manual`). Se agregaron inputs de `desperdicio_pct` y `mano_obra_pct` (antes no existían en la fila). Se agregó columna de solo lectura para `cantidad_total`.
+- **Distinción de UX:** editar estos campos en la pantalla de un proyecto es un *override de esa cotización puntual*; editar la fila en `/admin/catalogo` cambia el *default global* para proyectos futuros. Son pantallas y acciones distintas, no deben mezclarse.
+- **Botón "🔄 Regenerar Cotización"** visible solo si `estado === 'COTIZADO'`: guarda los materiales (sin redirigir al dashboard) → llama `/regenerar-documentos` → recarga el proyecto. Se agregaron también accesos directos "↓ PDF" / "↓ Excel" en la misma pantalla.
+- **No usar `/procesar/sync`** (vía `/api/cotizacion`) para re-cotizar un proyecto ya `COTIZADO` — ese endpoint solo toma proyectos en `PENDIENTE/ERROR/EN_PROCESO` y ya los filtra así hoy, por eso no hubo que tocarlo.
+- Commit `e4a4daf`, pusheado a `main` el 2026-06-18.
+
 ## Bugs conocidos
-- Constraint `linea` NOT NULL — fix listo pero pendiente de ejecutar
+- Constraint `linea` NOT NULL — revisado en esta sesión: el `insert` de materiales siempre setea `linea: i + 1`, no se encontró ningún path que lo omita. Parece resuelto, pero no se confirmó con el autor original del reporte — validar si reaparece.
 
 ## Sesión Junio 2026 — cambios aplicados
 - **test-scraper refactorizado:** frontend ya no construye URLs ni determina flujo por tienda. Solo pasa `search_query`, `store_name`, `store_zip`, `modo` al backend Railway.
 - **test-scraper UI:** todas las tiendas desde BD (sin filtro), All Stores primero, toggle SerpApi/ScrapingBee, badges de estado, tabla comparativa para All Stores.
 - **catalogo modal:** `precio_source` cambiado de 4 botones visuales a `<select>` estándar — ya no se pierde al editar.
 - **tiendas CRUD:** agregados campos `store_zip` y `store_id` en tabla y modal.
+
+## Sesión 2026-06-18 — flujo de re-cotización + plan de prueba end-to-end
+- Implementado el flujo completo de "Regenerar Cotización" descrito arriba (4 cambios, ver sección anterior).
+- Backend ya desplegó `/regenerar-documentos` en Railway — confirmado por el usuario.
+- **Pendiente para la siguiente sesión: ejecutar la prueba end-to-end con un proyecto real**, usando el sistema "como usuario" antes de mostrarlo al cliente. Plan acordado (ver respuestas de esta sesión para el detalle de por qué se ajustó cada punto):
+  1. Crear 1 proyecto real con materiales que cubran: (a) material con caja/cobertura — validar cuántas cajas calcula el RPA para un área dada; (b) 1 material sin tienda fija para que busque en varias tiendas y compare precio; (c) actividades sin material con valor fijo y con valor manual; (d) todos los materiales con su división (CSI) asignada para validar el orden en el Excel/PDF.
+  2. Correr el flujo y contrastar contra lo que devuelve el RPA directamente (llamada paralela al backend para verificar).
+  3. Validar el Excel generado (orden por división, cálculo de cajas, precios) y probar el ciclo completo de "Regenerar Cotización" editando un material y confirmando que el PDF nuevo refleja el cambio.
+  4. **Cuidado con créditos SerpApi:** cuenta nueva en 41/250 al cierre de esta sesión — calcular cuántas búsquedas dispara el proyecto de prueba (el material "sin tienda" puede gastar 1 crédito por tienda) antes de correr el RPA.
+- **Fuera de alcance de la próxima sesión** (decisión tomada hoy, no son tareas de esta prueba):
+  - Afinar índices de BD — sin justificación de performance con 113 materiales, no hacer hasta que haya un problema real medido.
+  - Replicar las cotizaciones de ejemplo de Saxtimate — esfuerzo manual aparte, necesita los PDFs de referencia, se planea como sesión independiente.
 
 ## Variables de entorno Vercel
 - Supabase URL + anon key configuradas
