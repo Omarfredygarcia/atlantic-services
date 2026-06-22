@@ -302,7 +302,7 @@ export default function ProyectoFormPage() {
     )
   }
 
-  async function guardar(redirect = true) {
+  async function guardar() {
     if (!proyecto.cliente_nombre || !proyecto.cliente_email) {
       setMsg('❌ Nombre y email del cliente son obligatorios')
       return false
@@ -358,7 +358,7 @@ export default function ProyectoFormPage() {
         }
 
         setMsg('✅ Proyecto creado. Ve al Dashboard y corre el RPA.')
-        if (redirect) setTimeout(() => router.push('/admin/dashboard'), 2000)
+        setTimeout(() => router.push('/admin/dashboard'), 2000)
 
       } else {
         const { error } = await supabase.from('proyectos').update({
@@ -429,7 +429,6 @@ export default function ProyectoFormPage() {
         }
 
         setMsg('✅ Proyecto actualizado correctamente.')
-        if (redirect) setTimeout(() => router.push('/admin/dashboard'), 1500)
       }
       setGuardando(false)
       return true
@@ -458,7 +457,7 @@ export default function ProyectoFormPage() {
     setRegenerando(true)
     setMsg('Guardando cambios...')
 
-    const guardadoOk = await guardar(false)
+    const guardadoOk = await guardar()
     if (!guardadoOk) {
       setRegenerando(false)
       return
@@ -478,6 +477,17 @@ export default function ProyectoFormPage() {
       setMsg(`❌ Error al conectar con el servidor RPA: ${e.message}`)
     }
     setRegenerando(false)
+  }
+
+  async function guardarYPreguntarRegenerar() {
+    const ok = await guardar()
+    if (ok && !isNuevo && proyecto.estado === 'COTIZADO') {
+      if (confirm('Los valores cambiaron. ¿Quieres regenerar la cotización (PDF/Excel) ahora?')) {
+        await regenerar()
+      } else {
+        setMsg('✅ Proyecto actualizado. No olvides regenerar la cotización para que el PDF/Excel reflejen estos cambios.')
+      }
+    }
   }
 
   const totalMateriales = materiales.reduce((s, m) => s + (m.costo_material || 0), 0)
@@ -654,7 +664,7 @@ export default function ProyectoFormPage() {
 
         <div className="flex gap-3">
           <button
-            onClick={() => guardar()}
+            onClick={guardarYPreguntarRegenerar}
             disabled={guardando}
             className="bg-[#C9A84C] hover:bg-[#C97B10] disabled:bg-gray-600 text-black font-bold px-8 py-3 rounded-lg"
           >
