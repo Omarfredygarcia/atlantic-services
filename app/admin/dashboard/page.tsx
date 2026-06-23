@@ -53,30 +53,31 @@ function ModalRentabilidad({
   const [enviandoReporte, setEnviandoReporte] = useState(false)
   const [reporteMsg, setReporteMsg] = useState('')
   const [emailDestino, setEmailDestino] = useState('atlanticservicesgc@gmail.com')
-  const [showSchedule, setShowSchedule] = useState(false)
-  const [frecuencia, setFrecuencia] = useState<'semanal' | 'mensual'>('semanal')
-  const [scheduleMsg, setScheduleMsg] = useState('')
   const [filtro, setFiltro] = useState<'all' | '30' | '7'>('all')
 
   const barCanvasRef  = useRef<HTMLCanvasElement>(null)
   const donutCanvasRef = useRef<HTMLCanvasElement>(null)
   const barChartRef   = useRef<unknown>(null)
   const donutChartRef = useRef<unknown>(null)
+  const [chartLibReady, setChartLibReady] = useState(false)
 
   useEffect(() => { cargarStats() }, [])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && !(window as unknown as Record<string, unknown>).Chart) {
-      const script = document.createElement('script')
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js'
-      script.onload = () => { if (stats) renderCharts(stats) }
-      document.head.appendChild(script)
+    if (typeof window === 'undefined') return
+    if ((window as unknown as Record<string, unknown>).Chart) {
+      setChartLibReady(true)
+      return
     }
+    const script = document.createElement('script')
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js'
+    script.onload = () => setChartLibReady(true)
+    document.head.appendChild(script)
   }, [])
 
   useEffect(() => {
-    if (stats) renderCharts(stats)
-  }, [stats])
+    if (stats && chartLibReady) renderCharts(stats)
+  }, [stats, chartLibReady])
 
   async function cargarStats() {
     setLoadingStats(true)
@@ -123,7 +124,7 @@ function ModalRentabilidad({
         totalManoObra,
         totalValor:       totalMateriales + totalManoObra,
         avgPorProyecto:   proyectos.length ? (totalMateriales + totalManoObra) / proyectos.length : 0,
-        busquedasSerpApi: mats.length * 3,
+        busquedasSerpApi: logs.length,
         porCategoria,
         porTienda,
         matsPorProyecto,
@@ -256,19 +257,6 @@ function ModalRentabilidad({
       setReporteMsg('❌ Error al enviar el reporte')
     }
     setEnviandoReporte(false)
-  }
-
-  async function guardarProgramacion() {
-    setScheduleMsg('Guardando programación...')
-    try {
-      localStorage.setItem(
-        'reporte_schedule',
-        JSON.stringify({ email: emailDestino, frecuencia, activo: true })
-      )
-      setScheduleMsg(`✅ Envío ${frecuencia} programado a ${emailDestino}`)
-    } catch {
-      setScheduleMsg('✅ Programación guardada localmente')
-    }
   }
 
   function fmt(n: number) { return '$' + Math.round(n).toLocaleString('en-US') }
@@ -579,7 +567,7 @@ function ModalRentabilidad({
                 style={{ background: '#1C1C1C' }}
               >
                 <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">
-                  Enviar / programar reporte
+                  Enviar reporte
                 </p>
                 <div className="flex gap-3 items-end flex-wrap">
                   <div className="flex-1 min-w-[200px]">
@@ -599,52 +587,7 @@ function ModalRentabilidad({
                   >
                     {enviandoReporte ? '⏳ Enviando...' : '📧 Enviar ahora'}
                   </button>
-                  <button
-                    onClick={() => setShowSchedule(!showSchedule)}
-                    className="bg-[#252525] hover:bg-[#333] text-gray-300 font-bold text-sm px-5 py-2 rounded-lg border border-[#333] transition-colors whitespace-nowrap"
-                  >
-                    🗓 {showSchedule ? 'Ocultar' : 'Programar'}
-                  </button>
                 </div>
-
-                {showSchedule && (
-                  <div
-                    className="mt-4 p-4 rounded-lg border border-[#333]"
-                    style={{ background: '#252525' }}
-                  >
-                    <p className="text-gray-400 text-xs mb-3">
-                      Configurar envío automático periódico
-                    </p>
-                    <div className="flex gap-3 items-end flex-wrap">
-                      <div>
-                        <label className="text-gray-500 text-xs block mb-1">Frecuencia</label>
-                        <select
-                          value={frecuencia}
-                          onChange={e => setFrecuencia(e.target.value as 'semanal' | 'mensual')}
-                          className="bg-[#1C1C1C] border border-[#333] text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-[#C9A84C]"
-                        >
-                          <option value="semanal">Semanal (cada lunes)</option>
-                          <option value="mensual">Mensual (día 1)</option>
-                        </select>
-                      </div>
-                      <button
-                        onClick={guardarProgramacion}
-                        className="bg-[#5BB8D4] hover:bg-[#4AA0BB] text-black font-bold text-sm px-5 py-2 rounded-lg transition-colors"
-                      >
-                        ✓ Guardar programación
-                      </button>
-                    </div>
-                    {scheduleMsg && (
-                      <p className={`text-xs mt-2 ${scheduleMsg.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
-                        {scheduleMsg}
-                      </p>
-                    )}
-                    <p className="text-gray-600 text-xs mt-2">
-                      ⚠️ Requiere cron en cron-job.org →{' '}
-                      <code className="text-[#C9A84C]">/api/reportes/rentabilidad</code> (GET)
-                    </p>
-                  </div>
-                )}
 
                 {reporteMsg && (
                   <p

@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY!
 const FROM_EMAIL     = process.env.EMAIL_FROM || 'info@atlanticser.com'
@@ -306,6 +307,12 @@ function generarHTMLReporte(
 
 // ── POST: envío manual desde el panel ────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ ok: false, error: 'No autorizado' }, { status: 401 })
+  }
+
   try {
     const body = await req.json()
     const { email, stats, proyectos } = body
@@ -400,7 +407,7 @@ export async function GET(req: NextRequest) {
       totalManoObra,
       totalValor:       totalMateriales + totalManoObra,
       avgPorProyecto:   projs.length ? (totalMateriales + totalManoObra) / projs.length : 0,
-      busquedasSerpApi: mats.length * 3,
+      busquedasSerpApi: logsList.length,
       porCategoria,
       porTienda,
       matsPorProyecto,
