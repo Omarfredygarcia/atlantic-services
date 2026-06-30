@@ -649,6 +649,8 @@ export default function DashboardPage() {
   useEffect(() => {
     checkAuth()
     cargarProyectos()
+    // Ping silencioso al arrancar — despierta Railway para que no haya cold start cuando el usuario corra el RPA
+    fetch(`${process.env.NEXT_PUBLIC_RAILWAY_RPA_URL ?? ''}/`, { signal: AbortSignal.timeout(90000) }).catch(() => {})
     return () => { if (rpaPollingRef.current) clearInterval(rpaPollingRef.current) }
   }, [])
 
