@@ -466,15 +466,17 @@ export default function ProyectoFormPage() {
     cargarProyecto()
   }
 
-  async function regenerar() {
+  async function regenerar(skipSave = false) {
     const proyectoId = params?.id as string
     setRegenerando(true)
     setMsg('Guardando cambios...')
 
-    const guardadoOk = await guardar()
-    if (!guardadoOk) {
-      setRegenerando(false)
-      return
+    if (!skipSave) {
+      const guardadoOk = await guardar()
+      if (!guardadoOk) {
+        setRegenerando(false)
+        return
+      }
     }
 
     setMsg('Regenerando PDF y Excel...')
@@ -497,7 +499,7 @@ export default function ProyectoFormPage() {
     const ok = await guardar()
     if (ok && !isNuevo && proyecto.estado === 'COTIZADO') {
       if (confirm('Los valores cambiaron. ¿Quieres regenerar la cotización (PDF/Excel) ahora?')) {
-        await regenerar()
+        await regenerar(true)  // guardar() ya corrió arriba, no repetir
       } else {
         setMsg('✅ Proyecto actualizado. No olvides regenerar la cotización para que el PDF/Excel reflejen estos cambios.')
       }
