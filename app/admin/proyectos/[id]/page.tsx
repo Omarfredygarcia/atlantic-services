@@ -385,6 +385,7 @@ export default function ProyectoFormPage() {
         const existentes = materiales.filter(m => m.id && m.catalogo_id && m.categoria_id)
         for (const m of existentes) {
           const { error: updError } = await supabase.from('materiales').update({
+            linea:            m.linea,
             catalogo_id:      m.catalogo_id,
             categoria_id:     m.categoria_id,
             tienda_id:        m.tienda_id,
