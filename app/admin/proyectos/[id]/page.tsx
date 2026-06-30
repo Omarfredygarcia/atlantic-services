@@ -694,7 +694,7 @@ export default function ProyectoFormPage() {
           </button>
           {!isNuevo && proyecto.estado === 'COTIZADO' && (
             <button
-              onClick={regenerar}
+              onClick={() => regenerar()}
               disabled={regenerando}
               title="Guarda los ajustes de esta cotización y regenera el PDF/Excel sin volver a buscar precios"
               className="bg-[#5BB8D4] hover:bg-[#4AA0BB] disabled:bg-gray-600 text-black font-bold px-6 py-3 rounded-lg"
