@@ -426,7 +426,20 @@ export default function ProyectoFormPage() {
             }))
           ).select()
           if (insError) throw insError
-          if (insertados) setMaterialesOriginalIds(prev => new Set([...prev, ...insertados.map((r: Material) => r.id)]))
+          if (insertados) {
+            // Asignar IDs devueltos al estado para que el siguiente guardado
+            // los trate como existentes (UPDATE) y no los reinserte
+            setMateriales(prev => {
+              let idx = 0
+              return prev.map(m => {
+                if (!m.id && m.catalogo_id && m.categoria_id && idx < insertados.length) {
+                  return { ...m, id: insertados[idx++].id }
+                }
+                return m
+              })
+            })
+            setMaterialesOriginalIds(prev => new Set([...prev, ...insertados.map((r: Material) => r.id)]))
+          }
         }
 
         setMsg('✅ Proyecto actualizado correctamente.')
