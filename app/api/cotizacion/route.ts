@@ -23,11 +23,11 @@ export async function POST(req: NextRequest) {
   const RPA_URL = process.env.RPA_SERVICE_URL || 'http://localhost:8000'
 
   try {
-    const res = await fetch(`${RPA_URL}/procesar/sync`, {
+    const res = await fetch(`${RPA_URL}/procesar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ proyectos_ids: proyectos.map((p: { id: string }) => p.id) }),
-      signal: AbortSignal.timeout(120000),
+      signal: AbortSignal.timeout(30000),
     })
 
     if (!res.ok) throw new Error(`RPA service error: ${res.status}`)
@@ -35,7 +35,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      mensaje: `${result.completados || 0} proyecto(s) procesados`,
+      mensaje: `Procesando ${proyectos.length} proyecto(s) en background`,
+      procesando: proyectos.length,
       detalle: result
     })
   } catch (e: any) {

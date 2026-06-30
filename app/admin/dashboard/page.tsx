@@ -644,10 +644,12 @@ export default function DashboardPage() {
   const [filtroEstado, setFiltroEstado] = useState<string>('TODOS')
   const [usuario, setUsuario] = useState<string>('')
   const [showRentabilidad, setShowRentabilidad] = useState(false)
+  const rpaPollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     checkAuth()
     cargarProyectos()
+    return () => { if (rpaPollingRef.current) clearInterval(rpaPollingRef.current) }
   }, [])
 
   async function checkAuth() {
@@ -676,20 +678,36 @@ export default function DashboardPage() {
 
   async function correrRPA() {
     setRunningRPA(true)
-    setRpaMsg('Ejecutando RPA, por favor espera...')
+    setRpaMsg('Iniciando RPA...')
     try {
       const res = await fetch('/api/cotizacion', { method: 'POST' })
       const data = await res.json()
-      if (data.ok) {
-        setRpaMsg(`✅ ${data.mensaje || 'RPA completado'}`)
-        cargarProyectos()
-      } else {
+      if (!data.ok) {
         setRpaMsg(`❌ Error: ${data.error}`)
+        setRunningRPA(false)
+        return
       }
+      // RPA corre en background — hacer polling cada 5s hasta que no queden PENDIENTE/EN_PROCESO
+      setRpaMsg(`⏳ ${data.mensaje} — actualizando automáticamente cada 5s`)
+      if (rpaPollingRef.current) clearInterval(rpaPollingRef.current)
+      rpaPollingRef.current = setInterval(async () => {
+        const supabase = createClient()
+        const { data: pending } = await supabase
+          .from('proyectos')
+          .select('id')
+          .in('estado', ['PENDIENTE', 'EN_PROCESO'])
+        if (!pending || pending.length === 0) {
+          clearInterval(rpaPollingRef.current!)
+          rpaPollingRef.current = null
+          setRunningRPA(false)
+          setRpaMsg('✅ RPA completado')
+          cargarProyectos()
+        }
+      }, 5000)
     } catch {
       setRpaMsg('❌ Error al conectar con el servidor RPA')
+      setRunningRPA(false)
     }
-    setRunningRPA(false)
   }
 
   async function enviarAlCliente(proyectoId: string, clienteEmail: string) {
