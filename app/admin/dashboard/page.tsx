@@ -11,6 +11,9 @@ interface MaterialRow {
   categoria: string
   costo_material: number
   costo_mano_obra: number
+  precio_cotizacion: number | null
+  precio_compra: number | null
+  cantidad_total: number | null
 }
 
 interface ProyectoStats {
@@ -27,6 +30,7 @@ interface StatsRentabilidad {
   totalValor: number
   avgPorProyecto: number
   busquedasSerpApi: number
+  margenMateriales: number
   porCategoria: Record<string, number>
   porTienda: Record<string, number>
   matsPorProyecto: Record<string, { mat: number; mo: number; code: string }>
@@ -87,6 +91,12 @@ function ModalRentabilidad({
 
       const totalMateriales = mats.reduce((s: number, m: MaterialRow) => s + (m.costo_material || 0), 0)
       const totalManoObra   = mats.reduce((s: number, m: MaterialRow) => s + (m.costo_mano_obra || 0), 0)
+      const margenMateriales = mats.reduce((s: number, m: MaterialRow) => {
+        const cot = m.precio_cotizacion ?? 0
+        const com = m.precio_compra ?? 0
+        const qty = m.cantidad_total ?? 0
+        return s + (cot - com) * qty
+      }, 0)
 
       const porCategoria: Record<string, number> = {}
       mats.forEach((m: MaterialRow) => {
@@ -125,6 +135,7 @@ function ModalRentabilidad({
         totalValor:       totalMateriales + totalManoObra,
         avgPorProyecto:   proyectos.length ? (totalMateriales + totalManoObra) / proyectos.length : 0,
         busquedasSerpApi: logs.length,
+        margenMateriales,
         porCategoria,
         porTienda,
         matsPorProyecto,
@@ -323,7 +334,7 @@ function ModalRentabilidad({
             </div>
           ) : stats ? (
             <>
-              <div className="grid grid-cols-4 gap-3 mb-5">
+              <div className="grid grid-cols-5 gap-3 mb-5">
                 {[
                   {
                     label: 'Proyectos',
@@ -352,6 +363,13 @@ function ModalRentabilidad({
                     sub: `prom. ${fmtK(stats.avgPorProyecto)}/proyecto`,
                     color: 'text-green-400',
                     border: 'border-green-900',
+                  },
+                  {
+                    label: 'Margen materiales',
+                    value: fmtK(stats.margenMateriales),
+                    sub: 'MAX cotización − MIN compra',
+                    color: stats.margenMateriales > 0 ? 'text-emerald-400' : 'text-gray-500',
+                    border: stats.margenMateriales > 0 ? 'border-emerald-900' : 'border-[#333]',
                   },
                 ].map(k => (
                   <div

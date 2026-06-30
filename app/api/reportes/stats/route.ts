@@ -14,7 +14,7 @@ export async function GET() {
     process.env.SUPABASE_SERVICE_KEY! // ← service key, no anon
   )
   const [{ data: mats }, { data: logs }, { data: projs }] = await Promise.all([
-    supabase.from('materiales').select('proyecto_id, categoria, costo_material, costo_mano_obra'),
+    supabase.from('materiales').select('proyecto_id, categoria, costo_material, costo_mano_obra, precio_cotizacion, precio_compra, cantidad_total'),
     supabase.from('log_precios').select('tienda, es_precio_elegido'),
     supabase.from('proyectos').select('id, estado'),
   ])
