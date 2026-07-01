@@ -150,6 +150,12 @@ Backend agregó `POST /regenerar-documentos` `{ "proyecto_id": "<uuid>" }` — r
 - **No usar `/procesar/sync`** (vía `/api/cotizacion`) para re-cotizar un proyecto ya `COTIZADO` — ese endpoint solo toma proyectos en `PENDIENTE/ERROR/EN_PROCESO` y ya los filtra así hoy, por eso no hubo que tocarlo.
 - Commit `e4a4daf`, pusheado a `main` el 2026-06-18.
 
+## Sesión 2026-06-30 — RPA async polling + fixes de deploy
+
+- **`/api/cotizacion/route.ts`** — cambiado de `/procesar/sync` (bloqueante, 120s timeout) a `/procesar` (retorna inmediato). Resuelve el error "The operation was aborted due to timeout" cuando ScrapingBee × 3 tiendas tarda >120s.
+- **`app/admin/dashboard/page.tsx`** — `correrRPA()` ahora hace polling a Supabase cada 5s hasta que no queden proyectos en PENDIENTE/EN_PROCESO. Muestra "⏳ Procesando... actualizando cada 5s" mientras espera. `useEffect` agrega ping silencioso a Railway al cargar el dashboard (despierta el servicio en background para evitar cold start cuando el usuario hace click). Commits `c882333`, `b9cc585`.
+- **`app/admin/proyectos/[id]/page.tsx` línea 697** — `onClick={regenerar}` → `onClick={() => regenerar()}`. Fix de TS error que bloqueaba los últimos 4 builds de Vercel (`MouseEvent` no asignable a `boolean | undefined`). Commit `dd824e4`.
+
 ## Bugs conocidos
 - Constraint `linea` NOT NULL — revisado en esta sesión: el `insert` de materiales siempre setea `linea: i + 1`, no se encontró ningún path que lo omita. Parece resuelto, pero no se confirmó con el autor original del reporte — validar si reaparece.
 
@@ -205,17 +211,18 @@ Se ejecutó por primera vez el plan de prueba end-to-end descrito en la sesión 
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe" --headless --disable-gpu --print-to-pdf="<ruta>.pdf" --no-pdf-header-footer "file:///<ruta>.html"
   ```
 
-## 🔴 Hueco de seguridad — falta auth en casi toda `/api/*` (encontrado 2026-06-23, parcialmente corregido)
+## 🔴 Hueco de seguridad — falta auth en casi toda `/api/*` (encontrado 2026-06-23)
 
 Revisando un hallazgo del backend sobre `/api/reportes/stats`, se confirmó que el problema es de **toda la API**, no solo esa ruta: ninguna ruta usaba `createServerSupabaseClient()` + `getUser()` antes de tocar datos con la service key.
 
-**Ya corregido esta sesión** (chequeo de sesión agregado, `401` si no hay usuario):
-- `GET /api/reportes/stats` — antes era un dump público de costos/márgenes sin login.
+### ✅ Corregido, commiteado (`2463a8c`) y verificado en vivo en `atlanticser.com` (2026-06-23)
+- `GET /api/reportes/stats` — antes era un dump público de costos/márgenes sin login. Verificado: `curl https://atlanticser.com/api/reportes/stats` → `401` sin sesión.
 - `POST /api/reportes/rentabilidad` — antes era un relay de email abierto (cualquiera podía hacer que Resend enviara HTML arbitrario a cualquier dirección usando el dominio de Atlantic). El `GET` de este mismo archivo (usado por el cron de cron-job.org) **no se tocó** — sigue protegido por `x-cron-secret`, es un mecanismo de auth distinto y correcto para ese caso.
-- Se corrigió también `busquedasSerpApi: mats.length * 3` (dato inventado) → ahora usa `logs.length` (filas reales de `log_precios`), tanto en `cargarStats()` del dashboard como en el cron de `rentabilidad/route.ts`.
-- Se eliminó el botón "🗓 Programar" del modal de Rentabilidad (`app/admin/dashboard/page.tsx`) — solo hacía `localStorage.setItem(...)` y mostraba "✅ programado" sin configurar nada real; quedaba el botón "📧 Enviar ahora" que sí funciona.
+- `busquedasSerpApi: mats.length * 3` (dato inventado) → ahora `logs.length` (filas reales de `log_precios`), en `cargarStats()` del dashboard y en el cron de `rentabilidad/route.ts`. Verificado en producción: el modal de Rentabilidad ya muestra "80 consultas SerpApi" en vez del número inflado.
+- Botón "🗓 Programar" del modal de Rentabilidad eliminado (`app/admin/dashboard/page.tsx`) — solo hacía `localStorage.setItem(...)` y mostraba "✅ programado" sin configurar nada real. Queda solo "📧 Enviar ahora", que sí funciona. Verificado en producción: 0 ocurrencias del botón.
+- **Bug aparte encontrado al probar este fix — gráficas de Rentabilidad intermitentes:** el script de Chart.js se carga desde CDN (`cdnjs.cloudflare.com`) en un `useEffect`, y su `onload` usaba un closure de `stats` capturado en el montaje (casi siempre `null`, porque el fetch a Supabase normalmente termina después que arranca la carga del script). Si la red tardaba más en el CDN que en el fetch, el gráfico nunca se disparaba — intermitente, no reproducible a voluntad. Fix: nuevo estado `chartLibReady` seteado en el `onload`, y el render de las gráficas depende de `stats && chartLibReady` en vez del closure viejo. Verificado: 4/4 cargas frescas en local con canvas renderizado, y confirmado en producción con `getImageData` sobre el canvas.
 
-**Pendiente — mismo problema, sin corregir todavía, requiere sesión aparte:**
+**Pendiente — mismo problema de auth, sin corregir todavía, requiere sesión aparte:**
 | Ruta | Riesgo |
 |---|---|
 | `GET/POST /api/proyectos` | Expone nombre/email/teléfono/dirección de **todos** los clientes (`select('*, materiales(*)')`) |
