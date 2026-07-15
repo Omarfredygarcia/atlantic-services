@@ -516,7 +516,7 @@ export default function CatalogoPage() {
       {/* ── Modal Nuevo / Editar ───────────────────────────────────────────────── */}
       {modal && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1C1C1C] border border-[#333] rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#1C1C1C] border border-[#333] rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
 
             <h2 className="text-white font-bold text-lg mb-5">
               {editing ? '✏️ Editar Material' : '+ Nuevo Material'}
