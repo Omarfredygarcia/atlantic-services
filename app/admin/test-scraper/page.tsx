@@ -68,23 +68,62 @@ type ScraperResult = {
 
 // NOTA 2026-07-14: "serpapi" quedó deshabilitado en el backend (degradado a
 // herramienta opcional de discovery de catálogo, ya no es parte del pipeline
-// de cotización — ver rpa_service.py). Se agregaron los 2 motores reales que
-// resolvieron Menards y Lowe's ese día.
-type Modo = "scrapingbee" | "oxylabs-menards" | "brightdata-lowes";
+// de cotización — ver rpa_service.py). El resto son los motores reales de
+// producción, cada uno específico de UNA tienda — no es un menú libre, ver
+// STORE_ENGINES más abajo.
+type Modo = "apify" | "scrapingbee" | "oxylabs-menards" | "brightdata-lowes";
+
+type EngineDef = {
+  icon: string; label: string; hint: string; time: string;
+  color: string; bg: string; border: string;
+};
+
+const ENGINE_DEFS: Record<Modo, EngineDef> = {
+  apify: {
+    icon: "🏠", label: "Apify", time: "~1-3 seg",
+    hint: "Lookup real por product ID + ZIP — motor de producción, 6/6 histórico exacto",
+    color: "#fdba74", bg: "#2e1a00", border: "#c2410c",
+  },
+  "brightdata-lowes": {
+    icon: "🛒", label: "Bright Data", time: "~30-200 seg (a veces encola async)",
+    hint: "Precio real de Lowe's — motor de producción, ~7-8/10 exacto (2026-07-14)",
+    color: "#93c5fd", bg: "#0a1628", border: "#2563eb",
+  },
+  "oxylabs-menards": {
+    icon: "🔧", label: "Oxylabs", time: "~10-30 seg",
+    hint: "Precio EDLP real de Menards — motor de producción (2026-07-14)",
+    color: "#c4b5fd", bg: "#1a0d2e", border: "#7c3aed",
+  },
+  scrapingbee: {
+    icon: "🐝", label: "ScrapingBee", time: "~13-15 seg (2 llamadas)",
+    hint: "Búsqueda de texto / URL directa Modo A — usado hoy solo para Floor & Decor",
+    color: "#4ade80", bg: "#0a1a10", border: "#16a34a",
+  },
+};
+
+// Qué motor(es) aplican por tienda -- el primero es el default al seleccionar.
+// Motores que reciben URL directa de producto (no texto de búsqueda).
+const STORE_ENGINES: Record<string, Modo[]> = {
+  "Home Depot":    ["apify"],
+  "Lowe's":        ["brightdata-lowes", "apify"],
+  "Menards":       ["oxylabs-menards"],
+  "Floor & Decor": ["scrapingbee"],
+};
+const URL_BASED_MODOS: Modo[] = ["apify", "oxylabs-menards", "brightdata-lowes"];
 
 // ─── Helpers UI ───────────────────────────────────────────────────────────────
 
 function estrategiaLabel(s?: string) {
   const map: Record<string, string> = {
-    "edlp":                  "EDLP — precio oficial",
-    "json-ld":               "JSON-LD — datos estructurados",
-    "json-ld-offers":        "JSON-LD offers — datos estructurados",
-    "fallback-primer-dolar": "Fallback $ — menos confiable",
-    "google-shopping":       "Google Shopping (deshabilitado)",
-    "cache":                 "Caché 24h",
-    "not_implemented":       "No implementado",
-    "oxylabs-menards-edlp":  "Oxylabs — Menards EDLP",
-    "brightdata-lowes":      "Bright Data — Lowe's",
+    "edlp":                    "EDLP — precio oficial",
+    "json-ld":                 "JSON-LD — datos estructurados",
+    "json-ld-offers":          "JSON-LD offers — datos estructurados",
+    "fallback-primer-dolar":   "Fallback $ — menos confiable",
+    "cache":                   "Caché 24h",
+    "not_implemented":         "No implementado",
+    "oxylabs-menards-edlp":    "Oxylabs — Menards EDLP",
+    "brightdata-lowes":        "Bright Data — Lowe's",
+    "apify-product-lookup":    "Apify — product lookup",
   };
   return s ? (map[s] ?? s) : "—";
 }
@@ -119,16 +158,11 @@ function getStatusBadge(result: ScraperResult): { label: string; bg: string; col
 }
 
 function modeBadge(modo: Modo) {
-  const cfg = {
-    scrapingbee:      { label: "ScrapingBee",       bg: "#0a1a10", color: "#4ade80" },
-    "oxylabs-menards": { label: "Oxylabs (Menards)", bg: "#1a0d2e", color: "#c4b5fd" },
-    "brightdata-lowes": { label: "Bright Data (Lowe's)", bg: "#2e1a00", color: "#fdba74" },
-  };
-  const c = cfg[modo];
+  const c = ENGINE_DEFS[modo];
   return (
     <span style={{ fontSize: 13, backgroundColor: c.bg, color: c.color,
       padding: "2px 8px", borderRadius: 4, marginLeft: 8, fontWeight: 600 }}>
-      {c.label}
+      {c.icon} {c.label}
     </span>
   );
 }
@@ -203,16 +237,31 @@ export default function TestScraperPage() {
     setStoreZip(tienda?.store_zip ?? "");
   }, [tiendaId]);
 
-  const tiendaActual   = tiendas.find((t) => t.id === tiendaId);
-  const materialActual = catalogo.find((c) => c.id === materialId);
-  const isAllStores    = tiendaActual?.nombre === "All Stores";
+  const tiendaActual     = tiendas.find((t) => t.id === tiendaId);
+  const materialActual   = catalogo.find((c) => c.id === materialId);
+  const isAllStores      = tiendaActual?.nombre === "All Stores";
+  const availableEngines = tiendaActual ? (STORE_ENGINES[tiendaActual.nombre] ?? []) : [];
+  const isUrlBased       = URL_BASED_MODOS.includes(modo);
+
+  // ── Motor por defecto según tienda -- evita mostrar/dejar seleccionado un
+  // motor que no aplica (ej. Oxylabs quedaba marcado al cambiar a Home Depot)
+  useEffect(() => {
+    if (availableEngines.length > 0 && !availableEngines.includes(modo)) {
+      setModo(availableEngines[0]);
+    }
+    setResult(null);
+  }, [tiendaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function run() {
     if (!searchQuery.trim() || !tiendaActual) return;
     setLoading(true); setResult(null);
     try {
       let url: string;
-      if (modo === "oxylabs-menards") {
+      if (modo === "apify") {
+        // Motor real de Home Depot/Lowe's -- recibe URL directa de producto.
+        const storeKey = tiendaActual.nombre === "Home Depot" ? "homedepot" : "lowes";
+        url = `${RAILWAY_BASE}/test-apify?${new URLSearchParams({ store: storeKey, product_url: searchQuery })}`;
+      } else if (modo === "oxylabs-menards") {
         // Motor real de Menards (2026-07-14) -- recibe URL directa de
         // producto, no texto de búsqueda. El campo "Search Query" se
         // reutiliza como campo de URL cuando este modo está activo.
@@ -240,7 +289,7 @@ export default function TestScraperPage() {
     } finally { setLoading(false); }
   }
 
-  const canRun    = !!searchQuery.trim() && !!tiendaActual && !loading;
+  const canRun    = !!searchQuery.trim() && !!tiendaActual && !loading && availableEngines.length > 0;
   const precioFmt = result?.precio != null ? `$${result.precio.toFixed(2)}` : null;
   const badge     = result ? getStatusBadge(result) : null;
 
@@ -299,7 +348,7 @@ export default function TestScraperPage() {
             <div style={S.hint}>ZIP del cliente / sucursal — mejora precios locales</div>
           </Field>
 
-          {!isAllStores && (
+          {!isUrlBased && !isAllStores && (
             <Field label="Material del catálogo" color="#a78bfa">
               <select style={{ ...S.select, opacity: !tiendaId ? 0.4 : 1 }}
                 value={materialId} disabled={!tiendaId}
@@ -315,94 +364,90 @@ export default function TestScraperPage() {
             </Field>
           )}
 
-          <Field label={modo === "scrapingbee" ? "Search Query" : "URL directa del producto"} color="#34d399">
-            <input style={S.input} value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                modo === "oxylabs-menards"
-                  ? "https://www.menards.com/main/.../1021091/p-....htm"
-                  : modo === "brightdata-lowes"
-                    ? "https://www.lowes.com/pd/.../1010065"
-                    : isAllStores
-                      ? "ej: laminated composite shingle"
-                      : "ej: GAF Timberline HDZ laminated shingle 33.33 sq ft"
-              } />
-            <div style={S.hint}>
-              {modo === "scrapingbee"
-                ? <>Sin comillas ni ® ™ — usar &quot;in&quot; y &quot;ft&quot; en lugar de &quot; y &apos;</>
-                : "Pegar la URL completa del producto (no texto de búsqueda) — este motor matchea por URL exacta"}
-            </div>
+          {!isAllStores && (
+            <Field label={isUrlBased ? "URL directa del producto" : "Search Query"} color="#34d399">
+              <input style={S.input} value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={
+                  modo === "oxylabs-menards"
+                    ? "https://www.menards.com/main/.../1021091/p-....htm"
+                    : modo === "brightdata-lowes"
+                      ? "https://www.lowes.com/pd/.../1010065"
+                      : modo === "apify"
+                        ? tiendaActual?.nombre === "Home Depot"
+                          ? "https://www.homedepot.com/p/.../321711458"
+                          : "https://www.lowes.com/pd/.../1010065"
+                        : "ej: GAF Timberline HDZ laminated shingle 33.33 sq ft"
+                } />
+              <div style={S.hint}>
+                {isUrlBased
+                  ? "Pegar la URL completa del producto (no texto de búsqueda) — este motor matchea por URL exacta"
+                  : <>Sin comillas ni ® ™ — usar &quot;in&quot; y &quot;ft&quot; en lugar de &quot; y &apos;</>}
+              </div>
+            </Field>
+          )}
+
+          {/* Motor — solo se muestran los que realmente aplican a la tienda seleccionada */}
+          <Field label="Motor" color="#a78bfa">
+            {!tiendaActual ? (
+              <div style={S.hint}>Selecciona una tienda para ver su motor real</div>
+            ) : isAllStores ? (
+              <div style={S.emptyMsg}>
+                &quot;All Stores&quot; ya no está disponible en este sandbox — era una función de
+                SerpApi (comparación multi-tienda por texto), deshabilitada 2026-07-14.
+                Selecciona una tienda específica.
+              </div>
+            ) : availableEngines.length === 0 ? (
+              <div style={S.emptyMsg}>Esta tienda no tiene un motor de producción conectado todavía.</div>
+            ) : (
+              <>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {availableEngines.map((m) => {
+                    const e = ENGINE_DEFS[m];
+                    const active = modo === m;
+                    return (
+                      <button key={m} onClick={() => setModo(m)}
+                        style={{
+                          flex: 1, padding: "10px 8px", borderRadius: 8,
+                          fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 13, fontWeight: 600,
+                          cursor: "pointer", transition: "all 0.15s",
+                          backgroundColor: active ? e.bg : "#0f172a",
+                          color:           active ? e.color : "#64748b",
+                          border: `1px solid ${active ? e.border : "#1e293b"}`,
+                        }}>
+                        {e.icon} {e.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={S.hint}>{ENGINE_DEFS[modo]?.hint}</div>
+              </>
+            )}
           </Field>
 
-          {/* Motor de búsqueda */}
-          <Field label="Motor de búsqueda" color="#a78bfa">
-            <div style={{ display: "flex", gap: 8 }}>
-              {([
-                { m: "scrapingbee" as Modo,       icon: "🐝", label: "ScrapingBee" },
-                { m: "oxylabs-menards" as Modo,   icon: "🔧", label: "Oxylabs (Menards)" },
-                { m: "brightdata-lowes" as Modo,  icon: "🛒", label: "Bright Data (Lowe's)" },
-              ]).map(({ m, icon, label }) => (
-                <button key={m} onClick={() => setModo(m)}
-                  style={{
-                    flex: 1, padding: "10px 8px", borderRadius: 8,
-                    fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 13, fontWeight: 600,
-                    cursor: "pointer", transition: "all 0.15s",
-                    backgroundColor: modo === m
-                      ? (m === "scrapingbee" ? "#0a1a10" : m === "oxylabs-menards" ? "#1a0d2e" : "#2e1a00")
-                      : "#0f172a",
-                    color: modo === m
-                      ? (m === "scrapingbee" ? "#4ade80" : m === "oxylabs-menards" ? "#c4b5fd" : "#fdba74")
-                      : "#64748b",
-                    border: `1px solid ${modo === m
-                      ? (m === "scrapingbee" ? "#16a34a" : m === "oxylabs-menards" ? "#7c3aed" : "#c2410c")
-                      : "#1e293b"}`,
-                  }}>
-                  {icon} {label}
-                </button>
-              ))}
-            </div>
-            <div style={S.hint}>
-              {modo === "scrapingbee"
-                ? "Búsqueda de texto / URL directa Modo A — usado hoy solo para Floor & Decor"
-                : modo === "oxylabs-menards"
-                  ? "Precio EDLP real de Menards — reemplaza a ScrapingBee (bloqueado por Incapsula desde 2026-07-06)"
-                  : "Precio real de Lowe's — reemplaza a Apify (~46% de exactitud acumulada), validado 7-8/10"}
-            </div>
-          </Field>
-
-          <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-            <button style={S.btnOff} disabled>
-              🎭 Playwright
-              <span style={S.pronto}>PRONTO</span>
-            </button>
-            <button
-              style={{
-                ...S.btn,
-                opacity: canRun ? 1 : 0.5,
-                cursor: canRun ? "pointer" : "not-allowed",
-                backgroundColor: modo === "scrapingbee" ? "#0a1a10" : modo === "oxylabs-menards" ? "#1a0d2e" : "#2e1a00",
-                color: modo === "scrapingbee" ? "#4ade80" : modo === "oxylabs-menards" ? "#c4b5fd" : "#fdba74",
-                border: `1px solid ${modo === "scrapingbee" ? "#16a34a" : modo === "oxylabs-menards" ? "#7c3aed" : "#c2410c"}`,
-              }}
-              disabled={!canRun} onClick={run}>
-              {loading
-                ? <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-                    <Spin />Consultando…
-                  </span>
-                : isAllStores && modo === "scrapingbee"
-                  ? "🌐 Probar All Stores"
-                  : modo === "scrapingbee" ? "🐝 Probar ScrapingBee"
-                  : modo === "oxylabs-menards" ? "🔧 Probar Oxylabs (Menards)"
-                  : "🛒 Probar Bright Data (Lowe's)"}
-            </button>
-          </div>
+          <button
+            style={{
+              ...S.btn,
+              opacity: canRun ? 1 : 0.5,
+              cursor: canRun ? "pointer" : "not-allowed",
+              backgroundColor: ENGINE_DEFS[modo]?.bg     ?? "#0f172a",
+              color:            ENGINE_DEFS[modo]?.color ?? "#64748b",
+              border: `1px solid ${ENGINE_DEFS[modo]?.border ?? "#1e293b"}`,
+            }}
+            disabled={!canRun} onClick={run}>
+            {loading
+              ? <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
+                  <Spin />Consultando…
+                </span>
+              : `${ENGINE_DEFS[modo]?.icon ?? ""} Probar ${ENGINE_DEFS[modo]?.label ?? "—"}`}
+          </button>
 
           <div style={S.creditBox}>
-            🐝 <strong>ScrapingBee:</strong> usado hoy solo para Floor & Decor.<br />
-            🔧 <strong>Oxylabs:</strong> Menards, EDLP real (2026-07-14).<br />
-            🛒 <strong>Bright Data:</strong> Lowe&apos;s, ~7-8/10 exacto (2026-07-14).<br />
-            🏠 <strong>Home Depot</strong> sigue con Apify — ver <code>/test-apify</code>, no tiene UI acá todavía.<br />
-            <strong>SerpApi deshabilitado</strong> — degradado a herramienta opcional de discovery de catálogo.
+            🏠 <strong>Home Depot</strong> → Apify (6/6 histórico exacto).<br />
+            🛒 <strong>Lowe&apos;s</strong> → Bright Data, principal (~7-8/10) + Apify disponible para comparar.<br />
+            🔧 <strong>Menards</strong> → Oxylabs, EDLP real.<br />
+            🐝 <strong>Floor &amp; Decor</strong> → ScrapingBee, sin cambios.<br />
+            SerpApi deshabilitado — degradado a herramienta opcional de discovery de catálogo.
           </div>
 
         </div>
@@ -423,14 +468,11 @@ export default function TestScraperPage() {
           {loading && (
             <div style={S.center}>
               <Spin size={40} />
-              <div style={{
-                color: modo === "scrapingbee" ? "#4ade80" : modo === "oxylabs-menards" ? "#c4b5fd" : "#fdba74",
-                fontSize: 15, marginTop: 18,
-              }}>
-                Consultando {modo === "scrapingbee" ? "ScrapingBee" : modo === "oxylabs-menards" ? "Oxylabs" : "Bright Data"}…
+              <div style={{ color: ENGINE_DEFS[modo]?.color ?? "#94a3b8", fontSize: 15, marginTop: 18 }}>
+                Consultando {ENGINE_DEFS[modo]?.label ?? modo}…
               </div>
               <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 6 }}>
-                {modo === "scrapingbee" ? "~13-15 seg (2 llamadas)" : modo === "oxylabs-menards" ? "~10-30 seg" : "~30-200 seg (a veces encola async)"}
+                {ENGINE_DEFS[modo]?.time ?? ""}
               </div>
             </div>
           )}
@@ -531,7 +573,7 @@ export default function TestScraperPage() {
                   {([
                     ["Tienda",     tiendaActual?.nombre],
                     ["ZIP",        storeZip || null],
-                    ["Motor",      modo],
+                    ["Motor",      ENGINE_DEFS[modo]?.label ?? modo],
                     ["Estrategia", estrategiaLabel(result.price_strategy)],
                     ["Tiempo",     result.tiempo_ms != null
                       ? result.tiempo_ms < 1000
