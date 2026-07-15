@@ -66,7 +66,11 @@ type ScraperResult = {
   comparison?: ComparisonRow[];
 };
 
-type Modo = "serpapi" | "scrapingbee";
+// NOTA 2026-07-14: "serpapi" quedó deshabilitado en el backend (degradado a
+// herramienta opcional de discovery de catálogo, ya no es parte del pipeline
+// de cotización — ver rpa_service.py). Se agregaron los 2 motores reales que
+// resolvieron Menards y Lowe's ese día.
+type Modo = "scrapingbee" | "oxylabs-menards" | "brightdata-lowes";
 
 // ─── Helpers UI ───────────────────────────────────────────────────────────────
 
@@ -76,9 +80,11 @@ function estrategiaLabel(s?: string) {
     "json-ld":               "JSON-LD — datos estructurados",
     "json-ld-offers":        "JSON-LD offers — datos estructurados",
     "fallback-primer-dolar": "Fallback $ — menos confiable",
-    "google-shopping":       "Google Shopping",
+    "google-shopping":       "Google Shopping (deshabilitado)",
     "cache":                 "Caché 24h",
     "not_implemented":       "No implementado",
+    "oxylabs-menards-edlp":  "Oxylabs — Menards EDLP",
+    "brightdata-lowes":      "Bright Data — Lowe's",
   };
   return s ? (map[s] ?? s) : "—";
 }
@@ -114,8 +120,9 @@ function getStatusBadge(result: ScraperResult): { label: string; bg: string; col
 
 function modeBadge(modo: Modo) {
   const cfg = {
-    serpapi:     { label: "SerpApi",     bg: "#1e3a5f", color: "#93c5fd" },
-    scrapingbee: { label: "ScrapingBee", bg: "#0a1a10", color: "#4ade80" },
+    scrapingbee:      { label: "ScrapingBee",       bg: "#0a1a10", color: "#4ade80" },
+    "oxylabs-menards": { label: "Oxylabs (Menards)", bg: "#1a0d2e", color: "#c4b5fd" },
+    "brightdata-lowes": { label: "Bright Data (Lowe's)", bg: "#2e1a00", color: "#fdba74" },
   };
   const c = cfg[modo];
   return (
@@ -135,7 +142,7 @@ export default function TestScraperPage() {
   const [materialId, setMaterialId]   = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [storeZip, setStoreZip]       = useState("");
-  const [modo, setModo]               = useState<Modo>("serpapi");
+  const [modo, setModo]               = useState<Modo>("scrapingbee");
   const [result, setResult]           = useState<ScraperResult | null>(null);
   const [loading, setLoading]         = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -204,14 +211,28 @@ export default function TestScraperPage() {
     if (!searchQuery.trim() || !tiendaActual) return;
     setLoading(true); setResult(null);
     try {
-      const qs = new URLSearchParams({
-        search_query: searchQuery,
-        store_name:   tiendaActual.nombre,
-        store_zip:    storeZip,
-        modo,
-        debug:        "1",
-      });
-      const res = await fetch(`${RAILWAY_BASE}/test-scraper?${qs}`, { cache: "no-store" });
+      let url: string;
+      if (modo === "oxylabs-menards") {
+        // Motor real de Menards (2026-07-14) -- recibe URL directa de
+        // producto, no texto de búsqueda. El campo "Search Query" se
+        // reutiliza como campo de URL cuando este modo está activo.
+        url = `${RAILWAY_BASE}/test-oxylabs-menards?${new URLSearchParams({ product_url: searchQuery })}`;
+      } else if (modo === "brightdata-lowes") {
+        // Motor real de Lowe's (2026-07-14) -- ídem, URL directa de producto.
+        // Puede tardar 30-200s -- Bright Data a veces encola async aunque se
+        // pida modo síncrono, no es un timeout roto.
+        url = `${RAILWAY_BASE}/test-brightdata-lowes?${new URLSearchParams({ product_url: searchQuery })}`;
+      } else {
+        const qs = new URLSearchParams({
+          search_query: searchQuery,
+          store_name:   tiendaActual.nombre,
+          store_zip:    storeZip,
+          modo,
+          debug:        "1",
+        });
+        url = `${RAILWAY_BASE}/test-scraper?${qs}`;
+      }
+      const res = await fetch(url, { cache: "no-store" });
       setResult(await res.json());
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Error desconocido";
@@ -294,42 +315,58 @@ export default function TestScraperPage() {
             </Field>
           )}
 
-          <Field label="Search Query" color="#34d399">
+          <Field label={modo === "scrapingbee" ? "Search Query" : "URL directa del producto"} color="#34d399">
             <input style={S.input} value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isAllStores
-                ? "ej: laminated composite shingle"
-                : "ej: GAF Timberline HDZ laminated shingle 33.33 sq ft"} />
-            <div style={S.hint}>Sin comillas ni ® ™ — usar &quot;in&quot; y &quot;ft&quot; en lugar de &quot; y &apos;</div>
+              placeholder={
+                modo === "oxylabs-menards"
+                  ? "https://www.menards.com/main/.../1021091/p-....htm"
+                  : modo === "brightdata-lowes"
+                    ? "https://www.lowes.com/pd/.../1010065"
+                    : isAllStores
+                      ? "ej: laminated composite shingle"
+                      : "ej: GAF Timberline HDZ laminated shingle 33.33 sq ft"
+              } />
+            <div style={S.hint}>
+              {modo === "scrapingbee"
+                ? <>Sin comillas ni ® ™ — usar &quot;in&quot; y &quot;ft&quot; en lugar de &quot; y &apos;</>
+                : "Pegar la URL completa del producto (no texto de búsqueda) — este motor matchea por URL exacta"}
+            </div>
           </Field>
 
           {/* Motor de búsqueda */}
           <Field label="Motor de búsqueda" color="#a78bfa">
             <div style={{ display: "flex", gap: 8 }}>
-              {(["serpapi", "scrapingbee"] as Modo[]).map((m) => (
+              {([
+                { m: "scrapingbee" as Modo,       icon: "🐝", label: "ScrapingBee" },
+                { m: "oxylabs-menards" as Modo,   icon: "🔧", label: "Oxylabs (Menards)" },
+                { m: "brightdata-lowes" as Modo,  icon: "🛒", label: "Bright Data (Lowe's)" },
+              ]).map(({ m, icon, label }) => (
                 <button key={m} onClick={() => setModo(m)}
                   style={{
-                    flex: 1, padding: "10px 12px", borderRadius: 8,
-                    fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 14, fontWeight: 600,
+                    flex: 1, padding: "10px 8px", borderRadius: 8,
+                    fontFamily: "'DM Mono','Fira Code',monospace", fontSize: 13, fontWeight: 600,
                     cursor: "pointer", transition: "all 0.15s",
                     backgroundColor: modo === m
-                      ? (m === "serpapi" ? "#1e3a5f" : "#0a1a10")
+                      ? (m === "scrapingbee" ? "#0a1a10" : m === "oxylabs-menards" ? "#1a0d2e" : "#2e1a00")
                       : "#0f172a",
                     color: modo === m
-                      ? (m === "serpapi" ? "#93c5fd" : "#4ade80")
+                      ? (m === "scrapingbee" ? "#4ade80" : m === "oxylabs-menards" ? "#c4b5fd" : "#fdba74")
                       : "#64748b",
                     border: `1px solid ${modo === m
-                      ? (m === "serpapi" ? "#2563eb" : "#16a34a")
+                      ? (m === "scrapingbee" ? "#16a34a" : m === "oxylabs-menards" ? "#7c3aed" : "#c2410c")
                       : "#1e293b"}`,
                   }}>
-                  {m === "serpapi" ? "🔍 SerpApi" : "🐝 ScrapingBee"}
+                  {icon} {label}
                 </button>
               ))}
             </div>
             <div style={S.hint}>
-              {modo === "serpapi"
-                ? "Google Shopping — rápido ~1s, caché 24h"
-                : "Scraping directo — ~13-15s, 2 créditos SB"}
+              {modo === "scrapingbee"
+                ? "Búsqueda de texto / URL directa Modo A — usado hoy solo para Floor & Decor"
+                : modo === "oxylabs-menards"
+                  ? "Precio EDLP real de Menards — reemplaza a ScrapingBee (bloqueado por Incapsula desde 2026-07-06)"
+                  : "Precio real de Lowe's — reemplaza a Apify (~46% de exactitud acumulada), validado 7-8/10"}
             </div>
           </Field>
 
@@ -343,25 +380,29 @@ export default function TestScraperPage() {
                 ...S.btn,
                 opacity: canRun ? 1 : 0.5,
                 cursor: canRun ? "pointer" : "not-allowed",
-                backgroundColor: modo === "serpapi" ? "#1e3a5f" : "#0a1a10",
-                color: modo === "serpapi" ? "#93c5fd" : "#4ade80",
-                border: `1px solid ${modo === "serpapi" ? "#2563eb" : "#16a34a"}`,
+                backgroundColor: modo === "scrapingbee" ? "#0a1a10" : modo === "oxylabs-menards" ? "#1a0d2e" : "#2e1a00",
+                color: modo === "scrapingbee" ? "#4ade80" : modo === "oxylabs-menards" ? "#c4b5fd" : "#fdba74",
+                border: `1px solid ${modo === "scrapingbee" ? "#16a34a" : modo === "oxylabs-menards" ? "#7c3aed" : "#c2410c"}`,
               }}
               disabled={!canRun} onClick={run}>
               {loading
                 ? <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
                     <Spin />Consultando…
                   </span>
-                : isAllStores
+                : isAllStores && modo === "scrapingbee"
                   ? "🌐 Probar All Stores"
-                  : modo === "serpapi" ? "🔍 Probar SerpApi" : "🐝 Probar ScrapingBee"}
+                  : modo === "scrapingbee" ? "🐝 Probar ScrapingBee"
+                  : modo === "oxylabs-menards" ? "🔧 Probar Oxylabs (Menards)"
+                  : "🛒 Probar Bright Data (Lowe's)"}
             </button>
           </div>
 
           <div style={S.creditBox}>
-            🐝 <strong>Créditos ScrapingBee:</strong> ~525 restantes → ~260 pruebas (2 llamadas).<br />
-            🔍 <strong>SerpApi:</strong> activo — caché 24h reduce consumo.<br />
-            <strong>SCRAPINGBEE_ENABLED=false</strong> en Railway — solo SerpApi disponible.
+            🐝 <strong>ScrapingBee:</strong> usado hoy solo para Floor & Decor.<br />
+            🔧 <strong>Oxylabs:</strong> Menards, EDLP real (2026-07-14).<br />
+            🛒 <strong>Bright Data:</strong> Lowe&apos;s, ~7-8/10 exacto (2026-07-14).<br />
+            🏠 <strong>Home Depot</strong> sigue con Apify — ver <code>/test-apify</code>, no tiene UI acá todavía.<br />
+            <strong>SerpApi deshabilitado</strong> — degradado a herramienta opcional de discovery de catálogo.
           </div>
 
         </div>
@@ -382,11 +423,14 @@ export default function TestScraperPage() {
           {loading && (
             <div style={S.center}>
               <Spin size={40} />
-              <div style={{ color: modo === "serpapi" ? "#60a5fa" : "#4ade80", fontSize: 15, marginTop: 18 }}>
-                Consultando {modo === "serpapi" ? "SerpApi" : "ScrapingBee"}…
+              <div style={{
+                color: modo === "scrapingbee" ? "#4ade80" : modo === "oxylabs-menards" ? "#c4b5fd" : "#fdba74",
+                fontSize: 15, marginTop: 18,
+              }}>
+                Consultando {modo === "scrapingbee" ? "ScrapingBee" : modo === "oxylabs-menards" ? "Oxylabs" : "Bright Data"}…
               </div>
               <div style={{ color: "#94a3b8", fontSize: 14, marginTop: 6 }}>
-                {modo === "serpapi" ? "~1-2 seg" : "~13-15 seg (2 llamadas)"}
+                {modo === "scrapingbee" ? "~13-15 seg (2 llamadas)" : modo === "oxylabs-menards" ? "~10-30 seg" : "~30-200 seg (a veces encola async)"}
               </div>
             </div>
           )}
