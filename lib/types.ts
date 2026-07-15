@@ -46,14 +46,26 @@ export interface Material {
   search_query?:    string
 
   // ── Calculados por el RPA ─────────────────────────────────
-  precio_unitario?: number
-  desperdicio_pct?: number
-  mano_obra_pct?:   number
-  cantidad_total?:  number
-  costo_material?:  number
-  costo_mano_obra?: number
-  fecha_precio?:    string
-  fuente_precio?:   string
+  precio_unitario?:   number   // precio final por unidad de compra (ej. por caja, ya convertido)
+  precio_cotizacion?: number   // MAX entre tiendas, ya convertido -- precio facturado al cliente
+  precio_compra?:     number   // MIN entre tiendas, ya convertido -- precio que paga Atlantic
+  precio_por_sqft?:   number   // precio crudo tal como lo dio la tienda ganadora (antes de convertir a caja) -- null si el material no se vende por caja
+  sqft_por_caja?:     number
+  longitud_pies?:     number
+  desperdicio_pct?:   number
+  mano_obra_pct?:     number
+  cantidad_total?:    number
+  costo_material?:    number
+  costo_mano_obra?:   number
+  fecha_precio?:      string
+  fuente_precio?:     string
+  comparison?: {
+    store: string
+    precio: number
+    product_title?: string
+    match_score?: number
+    winner?: boolean
+  }[]
 
   created_at: string
   updated_at?: string

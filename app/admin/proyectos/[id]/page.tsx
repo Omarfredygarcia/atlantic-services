@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import {
@@ -28,6 +28,73 @@ function PrecioSourceBadge({ source }: { source?: PrecioSource }) {
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colors[source]}`}>
       {labels[source]}
     </span>
+  )
+}
+
+// ── Combobox con buscador para el catálogo de materiales ───────────────────────
+// Reemplaza el <select> nativo -- con 113+ materiales activos en catálogo,
+// buscar a ojo en un dropdown plano se vuelve incómodo. Sin librería externa,
+// solo input + lista filtrada + cierre al hacer clic afuera.
+function MaterialCombobox({
+  materiales,
+  value,
+  onSelect,
+  disabled,
+}: {
+  materiales: CatalogoItem[]
+  value?: string
+  onSelect: (id: string) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen]   = useState(false)
+  const [query, setQuery] = useState('')
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  const seleccionado = materiales.find(m => m.id === value)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+        setQuery('')
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filtrados = query
+    ? materiales.filter(m => m.material.toLowerCase().includes(query.toLowerCase()))
+    : materiales
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <input
+        type="text"
+        disabled={disabled}
+        value={open ? query : (seleccionado?.material || '')}
+        onFocus={() => { setOpen(true); setQuery('') }}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Buscar material..."
+        className="w-full bg-[#252525] text-white border border-[#333] rounded px-2 py-1 text-sm disabled:opacity-40"
+      />
+      {open && (
+        <div className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto bg-[#1a1a1a] border border-[#333] rounded shadow-lg">
+          {filtrados.length === 0 && (
+            <div className="px-2 py-1 text-gray-500 text-sm">Sin resultados</div>
+          )}
+          {filtrados.map(m => (
+            <div
+              key={m.id}
+              onClick={() => { onSelect(m.id); setOpen(false); setQuery('') }}
+              className="px-2 py-1 text-sm text-white hover:bg-[#333] cursor-pointer"
+            >
+              {m.material}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -101,17 +168,12 @@ function MaterialRow({
       </td>
 
       <td className="px-3 py-2">
-        <select
-          value={mat.catalogo_id || ''}
-          onChange={e => handleMaterialChange(e.target.value)}
+        <MaterialCombobox
+          materiales={materialesFiltrados}
+          value={mat.catalogo_id}
+          onSelect={handleMaterialChange}
           disabled={!mat.categoria_id}
-          className="w-full bg-[#252525] text-white border border-[#333] rounded px-2 py-1 text-sm disabled:opacity-40"
-        >
-          <option value="">Material...</option>
-          {materialesFiltrados.map(m => (
-            <option key={m.id} value={m.id}>{m.material}</option>
-          ))}
-        </select>
+        />
       </td>
 
       <td className="px-3 py-2">
@@ -147,10 +209,22 @@ function MaterialRow({
           onChange={e => onUpdate('precio_unitario', parseFloat(e.target.value) || 0)}
           className="w-24 bg-[#252525] text-green-300 border border-[#333] rounded px-2 py-1 text-sm text-right"
           placeholder="$ override"
-          title="Precio para esta cotización (no afecta el default del catálogo)"
+          title={
+            mat.sqft_por_caja
+              ? `Precio por caja (${mat.sqft_por_caja}${mat.unidad || 'sf'}/caja)${mat.precio_por_sqft ? ` = $${mat.precio_por_sqft}/sqft × ${mat.sqft_por_caja}` : ''}. No afecta el default del catálogo.`
+              : 'Precio para esta cotización (no afecta el default del catálogo)'
+          }
           min="0"
           step="0.01"
         />
+        {mat.fuente_precio && (
+          <div
+            className="text-[10px] text-gray-500 truncate max-w-[110px]"
+            title={mat.fuente_precio}
+          >
+            {mat.fuente_precio}
+          </div>
+        )}
       </td>
 
       <td className="px-3 py-2">
@@ -181,6 +255,11 @@ function MaterialRow({
 
       <td className="px-3 py-2 text-gray-400 text-sm text-right">
         {mat.cantidad_total ?? '—'}
+        {mat.cantidad_total != null && (
+          <span className="text-gray-600 text-xs ml-1">
+            {mat.sqft_por_caja ? 'caja(s)' : (mat.unidad || '')}
+          </span>
+        )}
       </td>
 
       <td className="px-3 py-2 text-green-400 text-sm text-right font-medium">
