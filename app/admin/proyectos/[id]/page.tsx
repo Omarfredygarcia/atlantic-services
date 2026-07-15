@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import {
@@ -48,20 +49,48 @@ function MaterialCombobox({
 }) {
   const [open, setOpen]   = useState(false)
   const [query, setQuery] = useState('')
+  const [pos, setPos]     = useState({ top: 0, left: 0, width: 0 })
   const wrapRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const seleccionado = materiales.find(m => m.id === value)
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      const dentroDelInput = wrapRef.current?.contains(target)
+      const dentroDeLaLista = listRef.current?.contains(target)
+      if (!dentroDelInput && !dentroDeLaLista) {
         setOpen(false)
         setQuery('')
       }
     }
+    // "scroll" con capture=true -- cierra el dropdown si se hace scroll en
+    // cualquier ancestro (ej. el div overflow-x-auto de la tabla), para no
+    // dejarlo flotando en una posición vieja/incorrecta.
+    function handleScroll() {
+      setOpen(false)
+    }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('scroll', handleScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('scroll', handleScroll, true)
+    }
   }, [])
+
+  // La tabla que contiene este combo tiene un wrapper `overflow-x-auto`
+  // (necesario para el scroll horizontal de una tabla ancha) -- un dropdown
+  // `position: absolute` normal queda RECORTADO por ese overflow, invisible
+  // aunque el filtro funcione bien por dentro (parece "no busca" sin serlo).
+  // Fix: portal a document.body, posicionado con las coordenadas reales del
+  // input, así el dropdown escapa del contenedor con overflow.
+  function abrir() {
+    const r = wrapRef.current?.getBoundingClientRect()
+    if (r) setPos({ top: r.bottom, left: r.left, width: r.width })
+    setOpen(true)
+    setQuery('')
+  }
 
   const filtrados = query
     ? materiales.filter(m => m.material.toLowerCase().includes(query.toLowerCase()))
@@ -73,13 +102,17 @@ function MaterialCombobox({
         type="text"
         disabled={disabled}
         value={open ? query : (seleccionado?.material || '')}
-        onFocus={() => { setOpen(true); setQuery('') }}
+        onFocus={abrir}
         onChange={e => setQuery(e.target.value)}
         placeholder="Buscar material..."
         className="w-full bg-[#252525] text-white border border-[#333] rounded px-2 py-1 text-sm disabled:opacity-40"
       />
-      {open && (
-        <div className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto bg-[#1a1a1a] border border-[#333] rounded shadow-lg">
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={listRef}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}
+          className="z-50 mt-1 max-h-60 overflow-y-auto bg-[#1a1a1a] border border-[#333] rounded shadow-lg"
+        >
           {filtrados.length === 0 && (
             <div className="px-2 py-1 text-gray-500 text-sm">Sin resultados</div>
           )}
@@ -92,7 +125,8 @@ function MaterialCombobox({
               {m.material}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
