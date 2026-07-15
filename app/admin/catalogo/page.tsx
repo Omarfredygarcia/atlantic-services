@@ -27,6 +27,15 @@ interface CategoriaRef { id: string; nombre: string }
 interface TiendaRef    { id: string; nombre: string }
 interface UnidadRef    { id: string; codigo: string; descripcion: string }
 
+// Tiendas reales con motor de precios conectado -- allowlist explícita en
+// vez de "todo lo que no sea All Stores", porque la tabla `tiendas` tiene
+// filas que no son tiendas de verdad ("N/A" -- placeholder de integridad
+// para materiales fixed/manual, se queda activa a propósito; "Richard's
+// Supply" -- fuera de alcance, debería estar desactivada) y no queremos que
+// vuelvan a colarse en el conteo de URLs directas (bug encontrado 2026-07-14:
+// el denominador salía en 6 en vez de 4).
+const REAL_STORES = ['Home Depot', "Lowe's", 'Menards', 'Floor & Decor']
+
 // NOTA 2026-07-14: catalogo.tienda_id + search_query (de arriba) ya NO
 // alimentan el motor real de precios -- ese flujo de texto aproximado se
 // deshabilitó en el backend (rpa_service.py, SerpApi/ScrapingBee Modo B
@@ -39,12 +48,20 @@ interface UnidadRef    { id: string; codigo: string; descripcion: string }
 // sección nueva del modal es la que faltaba para poder configurar esas
 // URLs sin tocar SQL directo.
 
-// Opciones de precio_source con descripción visible
+// Opciones de precio_source con descripción visible.
+// NOTA 2026-07-14: "serpapi" y "scrapingbee" ya se comportan EXACTAMENTE
+// igual -- ambos solo llegan a la sección de catalogo_tienda_urls (URL
+// directa por tienda); el flujo de texto que los diferenciaba (SerpApi
+// Google Shopping vs. ScrapingBee búsqueda) está comentado en el backend
+// para los dos por igual. Mantener 2 opciones que ya no significan cosas
+// distintas solo confundía -- se colapsan a una sola en el selector.
+// El valor guardado en BD sigue siendo 'scrapingbee' (no se migran los
+// registros viejos con 'serpapi', siguen funcionando igual -- ver
+// SourceBadge más abajo, que muestra el mismo badge para ambos valores).
 const PRECIO_SOURCE_OPTIONS = [
-  { value: 'fixed',       label: 'Fixed — precio fijo de BD',          color: 'text-blue-400' },
-  { value: 'manual',      label: 'Manual — ingresado por usuario',      color: 'text-yellow-400' },
-  { value: 'serpapi',     label: 'SerpApi — Google Shopping',           color: 'text-green-400' },
-  { value: 'scrapingbee', label: 'ScrapingBee — scraping directo',      color: 'text-purple-400' },
+  { value: 'fixed',       label: 'Fixed — precio fijo de BD',              color: 'text-blue-400' },
+  { value: 'manual',      label: 'Manual — ingresado por usuario',          color: 'text-yellow-400' },
+  { value: 'scrapingbee', label: 'Automático — URL directa por tienda',     color: 'text-green-400' },
 ]
 
 const FORM_EMPTY = {
@@ -53,7 +70,7 @@ const FORM_EMPTY = {
   unidad_id:       '',
   material:        '',
   precio_base:     0,
-  precio_source:   'serpapi',    // ← NUEVO — default más común
+  precio_source:   'scrapingbee', // default: automático (URL directa por tienda)
   desperdicio_pct: 0.10,
   mano_obra_pct:   0.35,
   search_query:    '',
@@ -117,7 +134,7 @@ export default function CatalogoPage() {
         categoria_nombre: item.categorias?.nombre || '—',
         tienda_nombre:    item.tiendas?.nombre    || '—',
         unidad_codigo:    item.unidades?.codigo   || '—',
-        precio_source:    item.precio_source      || 'serpapi',   // ← NUEVO
+        precio_source:    item.precio_source      || 'scrapingbee',   // ← NUEVO
       }))
       setItems(normalized)
     }
@@ -154,7 +171,7 @@ export default function CatalogoPage() {
 
   async function guardarUrlsTienda(catalogoId: string) {
     const supabase = createClient()
-    const tiendasReales = tiendas.filter(t => t.nombre !== 'All Stores')
+    const tiendasReales = tiendas.filter(t => REAL_STORES.includes(t.nombre))
 
     for (const t of tiendasReales) {
       const url = (urlsPorTienda[t.id] || '').trim()
@@ -259,7 +276,7 @@ export default function CatalogoPage() {
       unidad_id:       item.unidad_id,
       material:        item.material,
       precio_base:     item.precio_base,
-      precio_source:   item.precio_source || 'serpapi',   // ← NUEVO
+      precio_source:   item.precio_source || 'scrapingbee',   // ← NUEVO
       desperdicio_pct: item.desperdicio_pct,
       mano_obra_pct:   item.mano_obra_pct,
       search_query:    item.search_query || '',
@@ -274,11 +291,13 @@ export default function CatalogoPage() {
 
   // ── Helper badge precio_source ────────────────────────────────────────────────
   function SourceBadge({ source }: { source: string }) {
+    // "serpapi" y "scrapingbee" muestran el mismo badge -- ver nota junto a
+    // PRECIO_SOURCE_OPTIONS, ya no son opciones distintas en la práctica.
     const map: Record<string, { label: string; cls: string }> = {
-      fixed:       { label: 'FIXED',       cls: 'bg-blue-900/50 text-blue-400 border-blue-700' },
-      manual:      { label: 'MANUAL',      cls: 'bg-yellow-900/50 text-yellow-400 border-yellow-700' },
-      serpapi:     { label: 'SERPAPI',      cls: 'bg-green-900/50 text-green-400 border-green-700' },
-      scrapingbee: { label: 'SCRAPINGBEE', cls: 'bg-purple-900/50 text-purple-400 border-purple-700' },
+      fixed:       { label: 'FIXED',      cls: 'bg-blue-900/50 text-blue-400 border-blue-700' },
+      manual:      { label: 'MANUAL',     cls: 'bg-yellow-900/50 text-yellow-400 border-yellow-700' },
+      serpapi:     { label: 'AUTOMÁTICO', cls: 'bg-green-900/50 text-green-400 border-green-700' },
+      scrapingbee: { label: 'AUTOMÁTICO', cls: 'bg-green-900/50 text-green-400 border-green-700' },
     }
     const s = map[source] || { label: source.toUpperCase(), cls: 'bg-gray-800 text-gray-400 border-gray-600' }
     return (
@@ -301,7 +320,11 @@ export default function CatalogoPage() {
     const matchTienda = filterTienda === 'TODAS' || i.tienda_nombre    === filterTienda
     const matchActivo = filterActivo === 'TODOS' ||
       (filterActivo === 'ACTIVO' ? i.activo : !i.activo)
-    const matchSource = filterSource === 'TODOS' || i.precio_source === filterSource  // ← NUEVO
+    // "scrapingbee" en el filtro debe traer también los registros viejos con
+    // 'serpapi' -- ya no son opciones distintas (ver nota PRECIO_SOURCE_OPTIONS)
+    const matchSource = filterSource === 'TODOS' ||
+      i.precio_source === filterSource ||
+      (filterSource === 'scrapingbee' && i.precio_source === 'serpapi')
     return matchSearch && matchCat && matchTienda && matchActivo && matchSource
   })
 
@@ -438,7 +461,7 @@ export default function CatalogoPage() {
                   <td className="px-3 py-3 whitespace-nowrap">
                     {(() => {
                       const n = urlCounts[item.id] || 0
-                      const total = tiendas.filter(t => t.nombre !== 'All Stores').length || 4
+                      const total = tiendas.filter(t => REAL_STORES.includes(t.nombre)).length || REAL_STORES.length
                       const cls = n === 0 ? 'bg-red-900/40 text-red-400 border-red-700'
                         : n < total ? 'bg-yellow-900/40 text-yellow-400 border-yellow-700'
                         : 'bg-green-900/40 text-green-400 border-green-700'
@@ -548,8 +571,7 @@ export default function CatalogoPage() {
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm">
                   <option value="fixed">fixed — precio fijo de BD</option>
                   <option value="manual">manual — ingresado por usuario</option>
-                  <option value="serpapi">serpapi — Google Shopping</option>
-                  <option value="scrapingbee">scrapingbee — scraping directo</option>
+                  <option value="scrapingbee">automático — URL directa por tienda</option>
                 </select>
               </div>
 
@@ -576,7 +598,7 @@ export default function CatalogoPage() {
                     Si solo pones 1, cotiza solo en esa tienda. Vacío = esa tienda no se consulta.
                   </p>
                   <div className="flex flex-col gap-2">
-                    {tiendas.filter(t => t.nombre !== 'All Stores').map(t => (
+                    {tiendas.filter(t => REAL_STORES.includes(t.nombre)).map(t => (
                       <div key={t.id}>
                         <label className="text-gray-400 text-[11px] mb-0.5 block">{t.nombre}</label>
                         <input
