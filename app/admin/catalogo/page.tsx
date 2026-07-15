@@ -27,6 +27,18 @@ interface CategoriaRef { id: string; nombre: string }
 interface TiendaRef    { id: string; nombre: string }
 interface UnidadRef    { id: string; codigo: string; descripcion: string }
 
+// NOTA 2026-07-14: catalogo.tienda_id + search_query (de arriba) ya NO
+// alimentan el motor real de precios -- ese flujo de texto aproximado se
+// deshabilitó en el backend (rpa_service.py, SerpApi/ScrapingBee Modo B
+// comentados). El motor real (calcular_materiales()) consulta
+// catalogo_tienda_urls: para cada material busca TODAS las filas activas
+// (una por tienda con URL directa de producto) y compara MAX (cotizar) /
+// MIN (comprar) entre las que existan -- sin importar qué diga el dropdown
+// "Tienda" de este formulario. Si un material no tiene ninguna fila acá,
+// no obtiene precio real (cae al fallback estático de catálogo). Esta
+// sección nueva del modal es la que faltaba para poder configurar esas
+// URLs sin tocar SQL directo.
+
 // Opciones de precio_source con descripción visible
 const PRECIO_SOURCE_OPTIONS = [
   { value: 'fixed',       label: 'Fixed — precio fijo de BD',          color: 'text-blue-400' },
@@ -71,6 +83,10 @@ export default function CatalogoPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [usuario,       setUsuario]       = useState('')
 
+  // URLs directas por tienda (catalogo_tienda_urls) -- motor real de precios
+  const [urlsPorTienda, setUrlsPorTienda] = useState<Record<string, string>>({})
+  const [urlCounts,     setUrlCounts]     = useState<Record<string, number>>({})
+
   useEffect(() => { checkAuth(); cargarTodo() }, [])
 
   async function checkAuth() {
@@ -85,13 +101,14 @@ export default function CatalogoPage() {
     setLoading(true)
     const supabase = createClient()
 
-    const [catRes, tRes, uRes, cRes] = await Promise.all([
+    const [catRes, tRes, uRes, cRes, urlRes] = await Promise.all([
       supabase.from('catalogo')
         .select('*, categorias(nombre), tiendas(nombre), unidades(codigo, descripcion)')
         .order('material'),
       supabase.from('tiendas').select('id, nombre').eq('activo', true).order('nombre'),
       supabase.from('unidades').select('id, codigo, descripcion').eq('activo', true).order('codigo'),
       supabase.from('categorias').select('id, nombre').eq('activo', true).order('nombre'),
+      supabase.from('catalogo_tienda_urls').select('catalogo_id').eq('activo', true),
     ])
 
     if (catRes.data) {
@@ -108,7 +125,56 @@ export default function CatalogoPage() {
     if (uRes.data) setUnidades(uRes.data)
     if (cRes.data) setCategorias(cRes.data)
 
+    // Conteo de URLs directas activas por material -- visibilidad de qué
+    // materiales realmente tienen precio real conectado (catalogo_tienda_urls)
+    if (urlRes.data) {
+      const counts: Record<string, number> = {}
+      for (const row of urlRes.data as { catalogo_id: string }[]) {
+        counts[row.catalogo_id] = (counts[row.catalogo_id] || 0) + 1
+      }
+      setUrlCounts(counts)
+    }
+
     setLoading(false)
+  }
+
+  // ── URLs directas por tienda (catalogo_tienda_urls) ──────────────────────────
+  async function cargarUrlsTienda(catalogoId: string) {
+    const supabase = createClient()
+    const { data } = await supabase.from('catalogo_tienda_urls')
+      .select('tienda_id, product_url')
+      .eq('catalogo_id', catalogoId)
+      .eq('activo', true)
+    const mapa: Record<string, string> = {}
+    for (const row of (data || []) as { tienda_id: string; product_url: string }[]) {
+      mapa[row.tienda_id] = row.product_url
+    }
+    setUrlsPorTienda(mapa)
+  }
+
+  async function guardarUrlsTienda(catalogoId: string) {
+    const supabase = createClient()
+    const tiendasReales = tiendas.filter(t => t.nombre !== 'All Stores')
+
+    for (const t of tiendasReales) {
+      const url = (urlsPorTienda[t.id] || '').trim()
+      const { data: existente } = await supabase.from('catalogo_tienda_urls')
+        .select('id').eq('catalogo_id', catalogoId).eq('tienda_id', t.id).maybeSingle()
+
+      if (url) {
+        if (existente) {
+          await supabase.from('catalogo_tienda_urls')
+            .update({ product_url: url, activo: true }).eq('id', existente.id)
+        } else {
+          await supabase.from('catalogo_tienda_urls')
+            .insert([{ catalogo_id: catalogoId, tienda_id: t.id, product_url: url, activo: true }])
+        }
+      } else if (existente) {
+        // No se borra -- se desactiva, conserva la URL por si se reactiva después
+        await supabase.from('catalogo_tienda_urls')
+          .update({ activo: false }).eq('id', existente.id)
+      }
+    }
   }
 
   // ── Guardar (crear o actualizar) ─────────────────────────────────────────────
@@ -135,13 +201,20 @@ export default function CatalogoPage() {
       updated_at:      new Date().toISOString(),
     }
 
+    let catalogoId = editing?.id || null
+
     if (editing) {
       const { error } = await supabase.from('catalogo')
         .update(payload).eq('id', editing.id)
       setMsg(error ? `❌ ${error.message}` : '✅ Material actualizado')
     } else {
-      const { error } = await supabase.from('catalogo').insert([payload])
+      const { data, error } = await supabase.from('catalogo').insert([payload]).select('id').single()
       setMsg(error ? `❌ ${error.message}` : '✅ Material agregado al catálogo')
+      catalogoId = data?.id || null
+    }
+
+    if (catalogoId) {
+      await guardarUrlsTienda(catalogoId)
     }
 
     setSaving(false)
@@ -174,6 +247,7 @@ export default function CatalogoPage() {
       tienda_id:    tiendas[0]?.id    || '',
       unidad_id:    unidades[0]?.id   || '',
     })
+    setUrlsPorTienda({})
     setModal(true)
   }
 
@@ -191,6 +265,8 @@ export default function CatalogoPage() {
       search_query:    item.search_query || '',
       activo:          item.activo,
     })
+    setUrlsPorTienda({})
+    cargarUrlsTienda(item.id)
     setModal(true)
   }
 
@@ -337,16 +413,16 @@ export default function CatalogoPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#C9A84C]">
-                {['Categoría','Material','Origen Precio','Search Query','Unidad','Tienda','Precio Base','Desperd.','M. Obra','Estado','Acciones'].map(h => (
+                {['Categoría','Material','Origen Precio','URLs tienda','Unidad','Precio Base','Desperd.','M. Obra','Estado','Acciones'].map(h => (
                   <th key={h} className="text-black font-bold text-xs px-3 py-3 text-left whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} className="text-center text-gray-400 py-12">Cargando catálogo...</td></tr>
+                <tr><td colSpan={10} className="text-center text-gray-400 py-12">Cargando catálogo...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={11} className="text-center text-gray-400 py-12">No hay materiales</td></tr>
+                <tr><td colSpan={10} className="text-center text-gray-400 py-12">No hay materiales</td></tr>
               ) : filtered.map((item, i) => (
                 <tr key={item.id}
                   className={`border-t border-[#333] hover:bg-[#252525] transition-colors ${i%2===0?'':'bg-[#1A1A1A]'}`}>
@@ -358,16 +434,24 @@ export default function CatalogoPage() {
                   <td className="px-3 py-3 whitespace-nowrap">
                     <SourceBadge source={item.precio_source} />
                   </td>
-                  <td className="px-3 py-3 max-w-[200px]">
-                    {item.search_query
-                      ? <span className="text-blue-400 text-xs font-mono">{item.search_query}</span>
-                      : <span className="text-gray-600 text-xs italic">— sin definir</span>
-                    }
+                  {/* URLs directas configuradas (catalogo_tienda_urls) -- lo que realmente usa el motor */}
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {(() => {
+                      const n = urlCounts[item.id] || 0
+                      const total = tiendas.filter(t => t.nombre !== 'All Stores').length || 4
+                      const cls = n === 0 ? 'bg-red-900/40 text-red-400 border-red-700'
+                        : n < total ? 'bg-yellow-900/40 text-yellow-400 border-yellow-700'
+                        : 'bg-green-900/40 text-green-400 border-green-700'
+                      return (
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${cls}`}>
+                          {n}/{total} tiendas
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-3 py-3 text-gray-300 text-xs font-mono whitespace-nowrap">
                     {item.unidad_codigo}
                   </td>
-                  <td className="px-3 py-3 text-gray-300 text-xs whitespace-nowrap">{item.tienda_nombre}</td>
                   <td className="px-3 py-3 text-green-400 text-sm font-mono whitespace-nowrap">
                     ${Number(item.precio_base).toFixed(2)}
                   </td>
@@ -469,19 +553,47 @@ export default function CatalogoPage() {
                 </select>
               </div>
 
-              {/* Search Query */}
+              {/* Search Query -- legacy, ya no alimenta el motor real (ver nota abajo) */}
               <div className="col-span-2">
                 <label className="text-gray-400 text-xs mb-1 block">
-                  Search Query
-                  <span className="text-gray-600 ml-2 font-normal">
-                    (texto exacto para buscar en tienda — vacío usa el nombre del material)
-                  </span>
+                  Search Query <span className="text-gray-600 font-normal">(legacy — ya no lo usa el motor)</span>
                 </label>
                 <input value={form.search_query}
                   onChange={e => setForm({ ...form, search_query: e.target.value })}
                   placeholder="Ej: luxury vinyl plank flooring waterproof 6x36"
-                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm opacity-60" />
               </div>
+
+              {/* URLs directas por tienda -- esto SÍ alimenta el motor real */}
+              {(form.precio_source === 'serpapi' || form.precio_source === 'scrapingbee') && (
+                <div className="col-span-2 border border-[#C9A84C]/40 rounded-lg p-3 bg-[#C9A84C]/5">
+                  <label className="text-[#C9A84C] text-xs mb-1 block font-semibold">
+                    🔗 URLs directas por tienda — esto es lo que usa el motor real
+                  </label>
+                  <p className="text-gray-500 text-[11px] mb-3">
+                    Pega la URL exacta del producto en cada tienda donde quieras que se busque precio.
+                    Si dejas 2 o 3 URLs, el motor las compara automáticamente (MAX para cotizar, MIN para comprar).
+                    Si solo pones 1, cotiza solo en esa tienda. Vacío = esa tienda no se consulta.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {tiendas.filter(t => t.nombre !== 'All Stores').map(t => (
+                      <div key={t.id}>
+                        <label className="text-gray-400 text-[11px] mb-0.5 block">{t.nombre}</label>
+                        <input
+                          value={urlsPorTienda[t.id] || ''}
+                          onChange={e => setUrlsPorTienda({ ...urlsPorTienda, [t.id]: e.target.value })}
+                          placeholder={`https://...`}
+                          className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-1.5 text-xs font-mono" />
+                      </div>
+                    ))}
+                  </div>
+                  {!editing && (
+                    <p className="text-yellow-500 text-[11px] mt-2">
+                      ⚠ Estas URLs se guardan al presionar &quot;Agregar&quot; — necesitan que el material se cree primero.
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Unidad */}
               <div>
