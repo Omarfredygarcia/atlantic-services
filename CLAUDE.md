@@ -139,6 +139,8 @@ debug        = "1"
 - **Floor & Decor** ⏳ — pendiente de probar
 - **All Stores** ✅ con matiz — el flujo funciona y elige ganador correctamente (confirmado contra Home Depot y Lowe's), pero **sin la tabla comparativa** — ver nota arriba en "All Stores"
 
+**Nota 2026-07-03:** esta tabla es sobre el sandbox `/test-scraper` (SerpApi/ScrapingBee directo). El flujo real de cotización (`catalogo_tienda_urls` en `calcular_materiales()`, backend) cambió ese día — Home Depot y Lowe's ahora usan Apify Product Lookup en vez de ScrapingBee, con precio validado por ZIP/tienda física. Ver detalle completo en `atlantic-RPA/CLAUDE.md`, sección "Sesión 2026-07-03". Menards sigue sin resolver.
+
 ## Estado actual de admin/proyectos/[id] — flujo de re-cotización (desde 2026-06-18)
 Backend agregó `POST /regenerar-documentos` `{ "proyecto_id": "<uuid>" }` — recalcula `costo_material`/`costo_mano_obra`/`cantidad_total` y regenera PDF+Excel **sin llamar SerpApi/ScrapingBee** (no consume créditos). Ya desplegado en Railway.
 
@@ -155,6 +157,14 @@ Backend agregó `POST /regenerar-documentos` `{ "proyecto_id": "<uuid>" }` — r
 - **`/api/cotizacion/route.ts`** — cambiado de `/procesar/sync` (bloqueante, 120s timeout) a `/procesar` (retorna inmediato). Resuelve el error "The operation was aborted due to timeout" cuando ScrapingBee × 3 tiendas tarda >120s.
 - **`app/admin/dashboard/page.tsx`** — `correrRPA()` ahora hace polling a Supabase cada 5s hasta que no queden proyectos en PENDIENTE/EN_PROCESO. Muestra "⏳ Procesando... actualizando cada 5s" mientras espera. `useEffect` agrega ping silencioso a Railway al cargar el dashboard (despierta el servicio en background para evitar cold start cuando el usuario hace click). Commits `c882333`, `b9cc585`.
 - **`app/admin/proyectos/[id]/page.tsx` línea 697** — `onClick={regenerar}` → `onClick={() => regenerar()}`. Fix de TS error que bloqueaba los últimos 4 builds de Vercel (`MouseEvent` no asignable a `boolean | undefined`). Commit `dd824e4`.
+
+## Sesión 2026-07-15 — combobox de materiales con buscador (reemplaza el `<select>` nativo)
+
+- **`app/admin/proyectos/[id]/page.tsx`** — nuevo componente `MaterialCombobox` (input + lista filtrada por texto) reemplaza el `<select>` nativo de material (113+ items en catálogo, incómodo de usar sin filtro). Commit `e6c5c71`.
+- **Bug real encontrado al reportarlo el usuario ("no busca"):** la tabla de materiales está envuelta en `<div className="overflow-x-auto">` (línea ~705, necesario para el scroll horizontal de una tabla con `min-w-[1300px]`) — el dropdown `position: absolute` del combobox quedaba **recortado** por ese contenedor, invisible aunque el filtro internamente sí funcionara. No se detectó en su momento porque no hay herramienta de navegador disponible en este entorno para probar interacciones reales (clicks/tipeo) — el combobox se validó solo por `tsc --noEmit` limpio, no por uso real. **Lección: un componente de UI nuevo con posicionamiento absoluto dentro de una tabla con scroll necesita probarse con clicks reales, no solo compilación, incluso cuando no hay forma de hacerlo automatizado — avisar explícitamente esa limitación en vez de dar el fix por bueno.**
+- **Fix:** `createPortal` (react-dom) — el dropdown se renderiza directo en `document.body`, posicionado con `getBoundingClientRect()` del input (`position: fixed`), así escapa del contenedor con overflow. Se cierra al hacer scroll en cualquier ancestro para no dejarlo flotando en una posición vieja. Commit `a62f280`.
+- Tipos nuevos en `Material` (`lib/types.ts`): `precio_cotizacion`, `precio_compra`, `precio_por_sqft`, `sqft_por_caja`, `longitud_pies`, `comparison[]` — reflejan columnas agregadas ese día en `materiales` (Supabase), ver `atlantic-RPA/CLAUDE.md` sesión 2026-07-15 para el detalle del backend.
+- `fuente_precio` (con la nota de conversión "$X/sqft × N sqft/caja = $Y/caja" que el backend agrega desde ese día) ahora se muestra como texto pequeño bajo `precio_unitario`, y la unidad real de `cantidad_total` ("caja(s)" cuando aplica `sqft_por_caja`, no solo un número suelto) — para que el precio final por caja no se vea como un dato aislado sin poder verificarlo contra el precio que muestra la tienda.
 
 ## Bugs conocidos
 - Constraint `linea` NOT NULL — revisado en esta sesión: el `insert` de materiales siempre setea `linea: i + 1`, no se encontró ningún path que lo omita. Parece resuelto, pero no se confirmó con el autor original del reporte — validar si reaparece.
