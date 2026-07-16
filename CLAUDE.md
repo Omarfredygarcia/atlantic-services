@@ -166,26 +166,40 @@ Backend agregó `POST /regenerar-documentos` `{ "proyecto_id": "<uuid>" }` — r
 - Tipos nuevos en `Material` (`lib/types.ts`): `precio_cotizacion`, `precio_compra`, `precio_por_sqft`, `sqft_por_caja`, `longitud_pies`, `comparison[]` — reflejan columnas agregadas ese día en `materiales` (Supabase), ver `atlantic-RPA/CLAUDE.md` sesión 2026-07-15 para el detalle del backend.
 - `fuente_precio` (con la nota de conversión "$X/sqft × N sqft/caja = $Y/caja" que el backend agrega desde ese día) ahora se muestra como texto pequeño bajo `precio_unitario`, y la unidad real de `cantidad_total` ("caja(s)" cuando aplica `sqft_por_caja`, no solo un número suelto) — para que el precio final por caja no se vea como un dato aislado sin poder verificarlo contra el precio que muestra la tienda.
 
-## 🔴 SEO on-page — pausado a propósito 2026-07-15, no ejecutar sin leer esto primero
+## Sesión 2026-07-16 — SEO on-page ejecutado, tabla `clientes` con selector, auth en 6 rutas API
 
-El usuario tiene otra sesión de Claude Code abierta en este mismo repo (`atlantic-services`) trabajando el frente de marketing/SEO por separado, para no cargar esta sesión. Se evaluó el plan propuesto ahí (meta tags Open Graph, JSON-LD `LocalBusiness`/`GeneralContractor`, `sitemap.xml`/`robots.txt`, alt text de las 80+ fotos de la galería) — confirmado en código real: `app/layout.tsx` solo tiene `title`/`description` genéricos, no existe `sitemap.xml` ni `robots.txt` en ningún lado del proyecto (`public/` solo tiene imágenes y 2 SVG).
+Trabajado desde la sesión de `atlantic-RPA` (ver `atlantic-RPA/CLAUDE.md` sección "Sesión 2026-07-16" para el detalle completo). Resumen de lo que tocó a este repo:
 
-**Decisión del usuario: NO ejecutar esto todavía — no quiere arriesgar nada de cara a la presentación al cliente.** Queda documentado para retomar después, con 4 riesgos concretos encontrados (con el contexto de este proyecto, no visibles solo leyendo el código):
+- **SEO on-page** — ver sección dedicada arriba, ya actualizada.
+- **Tabla `clientes` (aditiva) + CRUD + selector:**
+  - `app/admin/clientes/page.tsx` (nuevo) — CRUD igual al patrón de `tiendas` (lista, buscador, modal alta/edición, borrado con confirmación).
+  - `ClienteCombobox` en `app/admin/proyectos/[id]/page.tsx` — mismo patrón que `MaterialCombobox` (Portal a `document.body`). Reemplaza el input de texto libre de "Nombre del Cliente": buscar existente autocompleta email/teléfono/dirección y fija `cliente_id`; texto nuevo = cliente nuevo, creado al guardar vía `resolverClienteId()` (dedupe por email).
+  - **Cero cambios en `cliente_nombre`/`cliente_email`/`cliente_telefono`** — siguen siendo el snapshot de texto que consumen el backend RPA, PDF, Excel y email sin ninguna modificación. `cliente_id` es puramente aditivo.
+  - `lib/types.ts` — `Proyecto.cliente_id?: string` y `ClienteRef` nuevos.
+  - Botón "👤 Clientes" en el dashboard.
+  - **Mismo caveat que el combobox de materiales:** sin herramienta de navegador en este entorno, validado por `tsc --noEmit` limpio y lectura de código, no por clicks reales.
+  - Backfill (script Python vía REST + service key): los 3 proyectos vivos (`ATL-2026-011/012/013`) comparten cliente de prueba → 1 fila creada en `clientes`, los 3 con `cliente_id` correcto.
+  - Commit `53bf425`.
+- **Auth agregada a 6 rutas + `/api/precios` borrado** — ver sección "Hueco de seguridad" arriba, ya actualizada. Commit `3088b03`.
+- **Descartado** el cambio sin commitear de `playwright` en `package.json`/`package-lock.json` (semanas sin resolver, de una sesión de pruebas con navegador que ya no se usa).
+- **Deploy confirmado en vivo en Vercel** — `vercel ls --prod` mostró los 2 deploys de hoy como `Ready`/`Production`, y se verificó con `curl` real contra `www.atlanticser.com` que el contenido nuevo (robots.txt, sitemap.xml, JSON-LD, Open Graph) efectivamente está en producción, no solo pusheado.
 
-1. **🔴 NAP (nombre/dirección/teléfono) para el JSON-LD `LocalBusiness` debe salir de `config.py`, no inventarse ni repreguntarse:**
-   ```python
-   COMPANY = {
-       "address": "5341 W. 86th St. Indianapolis, IN 46268",
-       "phone":   "(317) 739-2540",
-       "web":     "www.atlanticser.com",
-   }
-   ```
-   Inconsistencia de NAP entre el sitio y los documentos/emails ya existentes es una señal negativa real de SEO local, no solo un detalle.
-2. **🔴 www vs. sin-www sin resolver.** `config.py` dice `www.atlanticser.com`, pero `atlantic-RPA/CLAUDE.md` documenta la URL de producción como `https://atlanticser.com` (sin www). Confirmar el dominio canónico en Vercel (¿hay redirect de uno a otro?) antes de meterlo en meta tags/JSON-LD/sitemap — si se usa el que no es, riesgo de contenido duplicado para Google.
-3. **🟡 Coordinación de git** — esta sesión pusheó 3 commits a `atlantic-services/main` el mismo día (combobox, `.gitignore`, tipos de `Material`). La sesión de SEO debe hacer `git pull origin main` antes de tocar nada, para no partir de un checkout desactualizado ni pisar esos cambios.
-4. **🟢 Notas técnicas menores:** Next.js 16 (App Router) soporta `app/sitemap.ts`/`app/robots.ts` generados dinámicamente, más prolijo que archivos estáticos; falta `metadataBase` en el `metadata` export de `layout.tsx` para que las URLs de Open Graph resuelvan bien; el sitio es bilingüe (`LanguageProvider` propio) — los meta tags en solo inglés no es un error, pero es una decisión a tener presente.
+## ✅ SEO on-page — EJECUTADO 2026-07-16 (desde la sesión de `atlantic-RPA`, no la de marketing)
 
-**Próximo paso (no ejecutado):** retomar esto después de la presentación al cliente, empezando por resolver los puntos 1 y 2 (que son decisiones/datos, no código) antes de tocar `layout.tsx`.
+Esta sección decía "pausado a propósito 2026-07-15" — superada. El usuario decidió el 2026-07-16 ejecutar el SEO **desde la sesión de `atlantic-RPA`** en vez de abrir/continuar la sesión de marketing separada, justamente para evitar el riesgo de coordinación de git que esta misma sección ya anticipaba (punto 3 de abajo, histórico).
+
+**Los 2 bloqueos reales (NAP y dominio canónico) se resolvieron sin esperar al cliente:**
+1. **Dominio canónico — resuelto con evidencia, no con la cuenta de config.py.** `curl -I https://atlanticser.com` devuelve `307 Temporary Redirect` hacia `https://www.atlanticser.com/` — confirma que `www.atlanticser.com` es el canónico real (coincide con lo que ya decía `config.py`, la duda era solo que Vercel no lo mostraba como dominio propio del proyecto — está resuelto vía redirect DNS de GoDaddy).
+2. **Teléfono — resuelto revisando el sitio, no `config.py`.** `(317) 991-5878` ya está publicado de forma consistente en 8+ lugares (`lib/i18n.ts`, `Footer.tsx`). El `(317) 739-2540` de `atlantic-RPA/config.py` es un dato que solo vive en el backend, nunca se muestra en el sitio público — usar un número distinto al que ya está impreso en la página hubiera sido peor que no tener schema. **Hallazgo nuevo sin resolver:** el footer tiene un segundo teléfono sin etiquetar, `(317) 607-1196` (`Footer.tsx:29`) — preguntar al cliente qué es.
+
+**Implementado y confirmado en vivo en producción (no solo pusheado):**
+- `app/layout.tsx` — `metadataBase` (`https://www.atlanticser.com`), Open Graph completo, Twitter card, JSON-LD `GeneralContractor` (teléfono, dirección, `openingHoursSpecification`, `areaServed` los 5 estados, `sameAs` con las 3 redes de `SocialLinks.tsx`).
+- `app/sitemap.ts` / `app/robots.ts` — nuevos, dinámicos (Next 16, confirma la nota técnica que esta sección ya anticipaba).
+- `app/gallery/page.tsx` — alt text descriptivo (grid, before/after slider, lightbox) reemplaza `"Before"/"After"/"Project"`.
+- Verificado con `curl` contra `www.atlanticser.com` real: `robots.txt`/`sitemap.xml` responden bien, el HTML de la home trae `GeneralContractor` y los `og:*` tags.
+- Commit `53bf425`.
+
+**Pendiente sin resolver, no bloqueante:** confirmar con el cliente qué es el segundo teléfono del footer.
 
 ## Bugs conocidos
 - Constraint `linea` NOT NULL — revisado en esta sesión: el `insert` de materiales siempre setea `linea: i + 1`, no se encontró ningún path que lo omita. Parece resuelto, pero no se confirmó con el autor original del reporte — validar si reaparece.
@@ -253,15 +267,17 @@ Revisando un hallazgo del backend sobre `/api/reportes/stats`, se confirmó que 
 - Botón "🗓 Programar" del modal de Rentabilidad eliminado (`app/admin/dashboard/page.tsx`) — solo hacía `localStorage.setItem(...)` y mostraba "✅ programado" sin configurar nada real. Queda solo "📧 Enviar ahora", que sí funciona. Verificado en producción: 0 ocurrencias del botón.
 - **Bug aparte encontrado al probar este fix — gráficas de Rentabilidad intermitentes:** el script de Chart.js se carga desde CDN (`cdnjs.cloudflare.com`) en un `useEffect`, y su `onload` usaba un closure de `stats` capturado en el montaje (casi siempre `null`, porque el fetch a Supabase normalmente termina después que arranca la carga del script). Si la red tardaba más en el CDN que en el fetch, el gráfico nunca se disparaba — intermitente, no reproducible a voluntad. Fix: nuevo estado `chartLibReady` seteado en el `onload`, y el render de las gráficas depende de `stats && chartLibReady` en vez del closure viejo. Verificado: 4/4 cargas frescas en local con canvas renderizado, y confirmado en producción con `getImageData` sobre el canvas.
 
-**Pendiente — mismo problema de auth, sin corregir todavía, requiere sesión aparte:**
-| Ruta | Riesgo |
-|---|---|
-| `GET/POST /api/proyectos` | Expone nombre/email/teléfono/dirección de **todos** los clientes (`select('*, materiales(*)')`) |
-| `POST /api/cotizacion` | Cualquiera dispara el RPA → gasta créditos SerpApi/ScrapingBee |
-| `POST /api/enviar` | Cualquiera con un `proyecto_id` fuerza el envío del email al cliente |
-| `POST /api/proyectos/[id]/regenerar` | Cualquiera regenera PDF/Excel de cualquier proyecto |
-| `GET /api/proyectos/[id]/pdf` y `/excel` | Descarga directa del documento (precios + datos del cliente) de cualquier proyecto |
-| `GET /api/precios` | **Código muerto** (nada del frontend lo llama) que quema `SERP_API_KEY` públicamente — candidato a borrar directamente en vez de protegerlo |
+**✅ RESUELTO 2026-07-16 — las 6 rutas que quedaban expuestas ya están protegidas, ejecutado desde la sesión de `atlantic-RPA` (commit `3088b03`):**
+| Ruta | Riesgo que tenía | Estado |
+|---|---|---|
+| `GET/POST /api/proyectos` | Exponía nombre/email/teléfono/dirección de **todos** los clientes (`select('*, materiales(*)')`) | ✅ Auth agregada |
+| `POST /api/cotizacion` | Cualquiera disparaba el RPA → gastaba créditos Oxylabs/Bright Data/Apify reales | ✅ Auth agregada |
+| `POST /api/enviar` | Cualquiera con un `proyecto_id` forzaba el envío del email al cliente | ✅ Auth agregada |
+| `POST /api/proyectos/[id]/regenerar` | Cualquiera regeneraba PDF/Excel de cualquier proyecto | ✅ Auth agregada |
+| `GET /api/proyectos/[id]/pdf` y `/excel` | Descarga directa del documento (precios + datos del cliente) de cualquier proyecto | ✅ Auth agregada |
+| `GET /api/precios` | Código muerto (0 referencias reales, confirmado con `grep`) que quemaba `SERP_API_KEY` públicamente | ✅ **Borrado** en vez de protegido |
+
+Confirmado que todos los llamados del frontend a estas rutas son same-origin (`fetch` relativo o `window.open`) y ya corren dentro de páginas `/admin` que exigen sesión propia — las cookies de auth viajan solas, cero cambios necesarios del lado del cliente/UI.
 
 `/api/contact` es la única ruta pública a propósito (formulario de la web) y está bien así.
 
