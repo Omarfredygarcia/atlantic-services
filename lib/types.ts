@@ -6,6 +6,7 @@ export interface Proyecto {
   id: string
   project_code: string
   fecha_creacion: string
+  cliente_id?: string   // FK -> clientes.id (snapshot de texto abajo se mantiene igual, no se elimina)
   cliente_nombre: string
   cliente_email: string
   cliente_telefono?: string
@@ -72,6 +73,16 @@ export interface Material {
 }
 
 // ── Tablas de referencia ──────────────────────────────────────
+export interface ClienteRef {
+  id: string
+  nombre: string
+  email?: string | null
+  telefono?: string | null
+  empresa?: string | null
+  direccion?: string | null
+  notas?: string | null
+}
+
 export interface CategoriaRef {
   id: string
   nombre: string

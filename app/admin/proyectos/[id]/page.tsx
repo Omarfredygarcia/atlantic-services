@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 import {
   Proyecto, Material, CatalogoItem,
-  CategoriaRef, TiendaRef, UnidadRef,
+  CategoriaRef, TiendaRef, UnidadRef, ClienteRef,
   TIPOS_PROYECTO, PRECIO_SOURCE_LABELS, PrecioSource
 } from '@/lib/types'
 
@@ -123,6 +123,96 @@ function MaterialCombobox({
               className="px-2 py-1 text-sm text-white hover:bg-[#333] cursor-pointer"
             >
               {m.material}
+            </div>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
+
+// ── Combobox con buscador para clientes existentes ─────────────────────────────
+// Mismo patrón que MaterialCombobox (Portal a document.body, sin librería externa).
+// A diferencia del combo de materiales, este permite texto libre: si no hay match
+// en `clientes`, se trata como cliente nuevo (se crea al guardar, ver resolverClienteId()).
+function ClienteCombobox({
+  clientes,
+  nombre,
+  onChangeNombre,
+  onSelectExistente,
+  disabled,
+}: {
+  clientes: ClienteRef[]
+  nombre: string
+  onChangeNombre: (nombre: string) => void
+  onSelectExistente: (cliente: ClienteRef) => void
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos]   = useState({ top: 0, left: 0, width: 0 })
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node
+      const dentroDelInput = wrapRef.current?.contains(target)
+      const dentroDeLaLista = listRef.current?.contains(target)
+      if (!dentroDelInput && !dentroDeLaLista) setOpen(false)
+    }
+    function handleScroll() { setOpen(false) }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('scroll', handleScroll, true)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [])
+
+  function abrir() {
+    const r = wrapRef.current?.getBoundingClientRect()
+    if (r) setPos({ top: r.bottom, left: r.left, width: r.width })
+    setOpen(true)
+  }
+
+  const filtrados = nombre
+    ? clientes.filter(c =>
+        c.nombre.toLowerCase().includes(nombre.toLowerCase())
+        || (c.email || '').toLowerCase().includes(nombre.toLowerCase())
+      )
+    : clientes
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <input
+        type="text"
+        disabled={disabled}
+        value={nombre}
+        onFocus={abrir}
+        onChange={e => { onChangeNombre(e.target.value); setOpen(true) }}
+        placeholder="Buscar cliente existente o escribir uno nuevo..."
+        className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-4 py-3 focus:outline-none focus:border-[#C9A84C] text-sm disabled:opacity-40"
+      />
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={listRef}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width }}
+          className="z-50 mt-1 max-h-60 overflow-y-auto bg-[#1a1a1a] border border-[#333] rounded shadow-lg"
+        >
+          {filtrados.length === 0 && (
+            <div className="px-3 py-2 text-gray-500 text-sm">
+              Sin coincidencias — se creará como cliente nuevo al guardar
+            </div>
+          )}
+          {filtrados.map(c => (
+            <div
+              key={c.id}
+              onClick={() => { onSelectExistente(c); setOpen(false) }}
+              className="px-3 py-2 text-sm text-white hover:bg-[#333] cursor-pointer"
+            >
+              <div className="font-semibold">{c.nombre}</div>
+              {c.email && <div className="text-gray-500 text-xs">{c.email}</div>}
             </div>
           ))}
         </div>,
@@ -327,6 +417,7 @@ export default function ProyectoFormPage() {
   const [materialesOriginalIds, setMaterialesOriginalIds] = useState<Set<string>>(new Set())
   const [catalogo,   setCatalogo]   = useState<CatalogoItem[]>([])
   const [categorias, setCategorias] = useState<CategoriaRef[]>([])
+  const [clientes,   setClientes]   = useState<ClienteRef[]>([])
   const [loading,    setLoading]    = useState(false)
   const [guardando,  setGuardando]  = useState(false)
   const [regenerando,setRegenerando]= useState(false)
@@ -380,6 +471,51 @@ export default function ProyectoFormPage() {
       console.error('Error cargando categorías:', catsError.message)
     }
     if (cats) setCategorias(cats)
+
+    const { data: cliData, error: cliError } = await supabase
+      .from('clientes')
+      .select('id, nombre, email, telefono, empresa, direccion, notas')
+      .order('nombre')
+
+    if (cliError) {
+      console.error('Error cargando clientes:', cliError.message)
+    }
+    if (cliData) setClientes(cliData)
+  }
+
+  // Resuelve el cliente_id a guardar en el proyecto: si ya se seleccionó uno
+  // existente del combobox, lo usa tal cual. Si el nombre es texto libre (cliente
+  // nuevo o editado), busca por email para no duplicar, y si no existe lo crea.
+  // Los campos de texto (cliente_nombre/email/telefono) en `proyectos` NO se tocan
+  // -- siguen siendo el snapshot que ya consume el backend RPA/PDF/Excel/email.
+  async function resolverClienteId(): Promise<string | null> {
+    if (proyecto.cliente_id) return proyecto.cliente_id
+
+    const supabase = createClient()
+    const email = (proyecto.cliente_email || '').trim().toLowerCase()
+
+    if (email) {
+      const existente = clientes.find(c => (c.email || '').trim().toLowerCase() === email)
+      if (existente) return existente.id
+    }
+
+    const { data, error } = await supabase
+      .from('clientes')
+      .insert({
+        nombre:    proyecto.cliente_nombre,
+        email:     proyecto.cliente_email || null,
+        telefono:  proyecto.cliente_telefono || null,
+        direccion: proyecto.direccion || null,
+      })
+      .select('id, nombre, email, telefono, empresa, direccion, notas')
+      .single()
+
+    if (error) {
+      console.error('Error creando cliente:', error.message)
+      return null
+    }
+    setClientes(prev => [...prev, data])
+    return data.id
   }
 
   async function cargarProyecto() {
@@ -426,12 +562,14 @@ export default function ProyectoFormPage() {
 
     try {
       let proyectoId = params?.id as string
+      const cliente_id = await resolverClienteId()
 
       if (isNuevo) {
         const { data, error } = await supabase
           .from('proyectos')
           .insert({
             project_code:     '',
+            cliente_id:       cliente_id,
             cliente_nombre:   proyecto.cliente_nombre,
             cliente_email:    proyecto.cliente_email,
             cliente_telefono: proyecto.cliente_telefono,
@@ -475,6 +613,7 @@ export default function ProyectoFormPage() {
 
       } else {
         const { error } = await supabase.from('proyectos').update({
+          cliente_id:       cliente_id,
           cliente_nombre:   proyecto.cliente_nombre,
           cliente_email:    proyecto.cliente_email,
           cliente_telefono: proyecto.cliente_telefono,
@@ -658,8 +797,24 @@ export default function ProyectoFormPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-400 text-xs font-bold mb-2">Nombre del Cliente *</label>
+              <ClienteCombobox
+                clientes={clientes}
+                nombre={proyecto.cliente_nombre || ''}
+                onChangeNombre={nombre => setProyecto(prev => ({ ...prev, cliente_nombre: nombre, cliente_id: undefined }))}
+                onSelectExistente={c => setProyecto(prev => ({
+                  ...prev,
+                  cliente_id:       c.id,
+                  cliente_nombre:   c.nombre,
+                  cliente_email:    c.email || '',
+                  cliente_telefono: c.telefono || '',
+                  direccion:        prev.direccion || c.direccion || '',
+                }))}
+              />
+            </div>
+
             {[
-              { label: 'Nombre del Cliente *', key: 'cliente_nombre',   type: 'text',   placeholder: 'John Smith' },
               { label: 'Email del Cliente *',  key: 'cliente_email',    type: 'email',  placeholder: 'john@gmail.com' },
               { label: 'Teléfono',             key: 'cliente_telefono', type: 'text',   placeholder: '(317) 555-1234' },
               { label: 'Área Total (ft²)',      key: 'area_total_ft2',  type: 'number', placeholder: '850' },

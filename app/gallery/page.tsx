@@ -127,6 +127,10 @@ const galleryVideos = [
 
 ]
 
+function altTextForGalleryImage(category: string, index: number) {
+  return `Atlantic Services ${category} construction project in Indianapolis, Indiana — photo ${index + 1}`
+}
+
 const categoryKeys = ['All', 'Commercial', 'Interior', 'Exterior', 'Remodeling', 'Waterproofing']
 const videoCategoryKeys = ['All', 'Commercial', 'Exterior', 'Interior', 'Remodeling']
 
@@ -159,9 +163,9 @@ function BeforeAfterSlider({
         onMouseMove={(e) => { if (isDragging.current) handleMove(e.clientX) }}
         onTouchMove={(e) => handleMove(e.touches[0].clientX)}
       >
-        <img src={after} alt="After" className="absolute inset-0 w-full h-full object-cover" />
+        <img src={after} alt={`${title} — after renovation by Atlantic Services, Indianapolis IN`} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}>
-          <img src={before} alt="Before" className="absolute inset-0 w-full h-full object-cover" />
+          <img src={before} alt={`${title} — before renovation, Atlantic Services Indianapolis IN`} className="absolute inset-0 w-full h-full object-cover" />
         </div>
         <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg z-10" style={{ left: `${sliderPos}%` }}>
           <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-[#E2B84A] border-2 border-white flex items-center justify-center shadow-lg">
@@ -348,7 +352,7 @@ export default function Gallery() {
                     className="relative aspect-square overflow-hidden rounded-sm cursor-pointer group"
                     onClick={() => setLightbox(img.src)}
                   >
-                    <img src={img.src} alt={img.category} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <img src={img.src} alt={altTextForGalleryImage(img.category, index)} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-300 flex items-center justify-center">
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-[#C9A84C] text-white text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-sm">
                         {img.category}
@@ -398,7 +402,7 @@ export default function Gallery() {
       {lightbox && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" onClick={() => setLightbox(null)}>
           <button className="absolute top-6 right-6 text-white text-4xl font-light hover:text-[#C9A84C] transition-colors" onClick={() => setLightbox(null)}>×</button>
-          <img src={lightbox} alt="Project" className="max-w-full max-h-full object-contain rounded-sm" onClick={(e) => e.stopPropagation()} />
+          <img src={lightbox} alt="Atlantic Services construction project — Indianapolis, IN" className="max-w-full max-h-full object-contain rounded-sm" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
 

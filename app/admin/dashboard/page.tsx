@@ -829,6 +829,12 @@ export default function DashboardPage() {
             📦 Catálogo
           </button>
           <button
+            onClick={() => router.push('/admin/clientes')}
+            className="bg-[#333] hover:bg-[#444] text-white font-bold px-5 py-2 rounded-lg transition-colors"
+          >
+            👤 Clientes
+          </button>
+          <button
             onClick={() => setShowRentabilidad(true)}
             className="bg-[#1C1C1C] hover:bg-[#252525] text-[#C9A84C] font-bold px-5 py-2 rounded-lg border border-[#C9A84C] transition-colors"
           >
