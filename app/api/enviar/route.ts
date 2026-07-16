@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   const body = await req.json()
   const RPA_URL = process.env.RPA_SERVICE_URL ||
     'https://atlantic-rpa-service-production.up.railway.app'

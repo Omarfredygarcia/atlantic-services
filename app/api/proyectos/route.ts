@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase-server'
+import { createServiceClient, createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function GET(req: NextRequest) {
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   const supabase = createServiceClient()
   const { searchParams } = new URL(req.url)
   const estado = searchParams.get('estado')
@@ -21,6 +25,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   const supabase = createServiceClient()
   const body = await req.json()
 

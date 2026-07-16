@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase-server'
+import { createServiceClient, createServerSupabaseClient } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
+  const authClient = await createServerSupabaseClient()
+  const { data: { user } } = await authClient.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   const supabase = createServiceClient()
 
   // Obtener proyectos pendientes
