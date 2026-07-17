@@ -184,6 +184,10 @@ Trabajado desde la sesión de `atlantic-RPA` (ver `atlantic-RPA/CLAUDE.md` secci
 - **Descartado** el cambio sin commitear de `playwright` en `package.json`/`package-lock.json` (semanas sin resolver, de una sesión de pruebas con navegador que ya no se usa).
 - **Deploy confirmado en vivo en Vercel** — `vercel ls --prod` mostró los 2 deploys de hoy como `Ready`/`Production`, y se verificó con `curl` real contra `www.atlanticser.com` que el contenido nuevo (robots.txt, sitemap.xml, JSON-LD, Open Graph) efectivamente está en producción, no solo pusheado.
 
+### Continuación de tarde — campo de identificación + Google Analytics 4
+- **`identificacion` (EIN/SSN) en `clientes`** — campo genérico de texto, EEUU no tiene un único formato tipo NIT/RUT. Solo en `app/admin/clientes/page.tsx` (tabla, modal, tipos) — no se agregó al formulario rápido de proyecto, no hace falta ahí. `lib/types.ts` → `ClienteRef.identificacion`. Commit `e9479fd`.
+- **Google Analytics 4** — `app/layout.tsx`, snippet `gtag.js` estándar vía `next/script` (`strategy="afterInteractive"`), Measurement ID `G-VXKTYXH2YT` (cuenta `atlanticservicesgc@gmail.com`, ver `atlantic-marketing/CLAUDE.md`). Confirmado con `curl` en producción y con una visita real registrada en el reporte de Tiempo Real de Analytics. Commit `f753bfa`.
+
 ## ✅ SEO on-page — EJECUTADO 2026-07-16 (desde la sesión de `atlantic-RPA`, no la de marketing)
 
 Esta sección decía "pausado a propósito 2026-07-15" — superada. El usuario decidió el 2026-07-16 ejecutar el SEO **desde la sesión de `atlantic-RPA`** en vez de abrir/continuar la sesión de marketing separada, justamente para evitar el riesgo de coordinación de git que esta misma sección ya anticipaba (punto 3 de abajo, histórico).
