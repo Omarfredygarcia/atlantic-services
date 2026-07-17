@@ -80,6 +80,7 @@ export interface ClienteRef {
   telefono?: string | null
   empresa?: string | null
   direccion?: string | null
+  identificacion?: string | null   // EIN (negocio) o SSN (individuo) -- EEUU no tiene un solo formato tipo NIT/RUT
   notas?: string | null
 }
 

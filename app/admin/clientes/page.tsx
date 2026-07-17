@@ -11,11 +11,12 @@ interface Cliente {
   telefono: string | null
   empresa: string | null
   direccion: string | null
+  identificacion: string | null
   notas: string | null
   created_at?: string
 }
 
-const EMPTY = { nombre: '', email: '', telefono: '', empresa: '', direccion: '', notas: '' }
+const EMPTY = { nombre: '', email: '', telefono: '', empresa: '', direccion: '', identificacion: '', notas: '' }
 
 export default function ClientesPage() {
   const router = useRouter()
@@ -55,6 +56,7 @@ export default function ClientesPage() {
       telefono: form.telefono || null,
       empresa: form.empresa || null,
       direccion: form.direccion || null,
+      identificacion: form.identificacion || null,
       notas: form.notas || null,
     }
     if (editing) {
@@ -86,6 +88,7 @@ export default function ClientesPage() {
       telefono: item.telefono || '',
       empresa: item.empresa || '',
       direccion: item.direccion || '',
+      identificacion: item.identificacion || '',
       notas: item.notas || '',
     })
     setModal(true)
@@ -143,22 +146,23 @@ export default function ClientesPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#C9A84C]">
-                {['Nombre', 'Email', 'Teléfono', 'Empresa', 'Dirección', 'Acciones'].map(h => (
+                {['Nombre', 'Email', 'Teléfono', 'Empresa', 'ID (EIN/SSN)', 'Dirección', 'Acciones'].map(h => (
                   <th key={h} className="text-black font-bold text-xs px-4 py-3 text-left">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center text-gray-400 py-12">Cargando...</td></tr>
+                <tr><td colSpan={7} className="text-center text-gray-400 py-12">Cargando...</td></tr>
               ) : filtrados.length === 0 ? (
-                <tr><td colSpan={6} className="text-center text-gray-500 py-12">Sin clientes todavía</td></tr>
+                <tr><td colSpan={7} className="text-center text-gray-500 py-12">Sin clientes todavía</td></tr>
               ) : filtrados.map((item, i) => (
                 <tr key={item.id} className={`border-t border-[#333] hover:bg-[#252525] ${i%2===0?'':'bg-[#1A1A1A]'}`}>
                   <td className="px-4 py-3 text-white font-semibold text-sm">{item.nombre}</td>
                   <td className="px-4 py-3 text-gray-300 text-xs">{item.email || <span className="text-gray-600">—</span>}</td>
                   <td className="px-4 py-3 text-gray-300 text-xs font-mono">{item.telefono || <span className="text-gray-600">—</span>}</td>
                   <td className="px-4 py-3 text-gray-300 text-xs">{item.empresa || <span className="text-gray-600">—</span>}</td>
+                  <td className="px-4 py-3 text-gray-300 text-xs font-mono">{item.identificacion || <span className="text-gray-600">—</span>}</td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{item.direccion || <span className="text-gray-600">—</span>}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
@@ -213,6 +217,15 @@ export default function ClientesPage() {
                 <input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })}
                   placeholder="Opcional"
                   className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-gray-400 text-xs mb-1 block">
+                  Identificación
+                  <span className="text-gray-600 ml-2 font-normal">(EIN si es negocio, SSN si es individuo)</span>
+                </label>
+                <input value={form.identificacion} onChange={e => setForm({ ...form, identificacion: e.target.value })}
+                  placeholder="Ej: 12-3456789"
+                  className="w-full bg-[#252525] text-white border border-[#333] rounded-lg px-3 py-2 text-sm font-mono" />
               </div>
               <div>
                 <label className="text-gray-400 text-xs mb-1 block">Notas</label>
