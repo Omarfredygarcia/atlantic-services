@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { Barlow, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import WhatsAppButton from '@/components/sections/WhatsAppButton'
 import { LanguageProvider } from '@/lib/LanguageContext'
+
+const GA_MEASUREMENT_ID = 'G-VXKTYXH2YT'
 
 const barlow = Barlow({
   subsets: ['latin'],
@@ -87,6 +90,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
         />
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
         <LanguageProvider>
           {children}
           <WhatsAppButton />
