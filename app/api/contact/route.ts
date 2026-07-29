@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
-      to: 'omargarciatransaereo@gmail.com',
+      to: 'info@atlanticser.com',
       subject: `New Estimate Request - ${service}`,
       html: `
         <h2>New Estimate Request</h2>
