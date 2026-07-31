@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     siteName: 'Atlantic Services',
-    images: [{ url: '/images/Logo-transparent.png', width: 1200, height: 630 }],
+    images: [{ url: '/images/og-share.png', width: 1200, height: 630 }],
     locale: 'en_US',
     type: 'website',
   },
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ['/images/Logo-transparent.png'],
+    images: ['/images/og-share.png'],
   },
 }
 
@@ -47,7 +47,7 @@ const localBusinessJsonLd = {
   '@context': 'https://schema.org',
   '@type': 'GeneralContractor',
   name: 'Atlantic Services LLC',
-  image: `${SITE_URL}/images/Logo-transparent.png`,
+  image: `${SITE_URL}/images/og-share.png`,
   url: SITE_URL,
   telephone: '+1-317-991-5878',
   email: 'info@atlanticser.com',
